@@ -79,6 +79,9 @@ export default function BlogPage() {
       <div className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-purple-600 mb-4">
+              నా బ్లాగ్
+            </h2>
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
                 My Blog
@@ -86,6 +89,9 @@ export default function BlogPage() {
             </h1>
             <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-600">
               Thoughts, stories, and experiences from my journey in media and arts
+            </p>
+            <p className="mt-2 max-w-2xl mx-auto text-lg text-purple-600 font-semibold">
+              నా ప్రయాణంలోని భావాలు, కథలు మరియు అనుభవాలు
             </p>
           </div>
         </div>

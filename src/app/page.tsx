@@ -31,13 +31,19 @@ export default function Home() {
             <div className="inline-block mb-6 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white text-sm font-semibold shadow-lg">
               RJ • Translator • Voice Artist
             </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-purple-600 mb-4">
+              నమస్కారం, నేను సుధ
+            </h2>
             <h1 className="text-5xl md:text-7xl font-bold mb-6">
               <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent">
-                Hi, I'm Sudha
+                Namaskaram, I'm Sudha
               </span>
             </h1>
             <p className="mt-4 max-w-2xl mx-auto text-xl text-gray-600">
               Welcome to my creative journey! For nearly two decades, I've been breathing life into words through radio, voice-overs, and translations.
+            </p>
+            <p className="mt-2 max-w-2xl mx-auto text-lg text-purple-600 font-semibold">
+              మా ప్రయాణంలో స్వాగతం! రెండు దశాబ్దాలుగా నేను రేడియో, వాయిస్-ఓవర్లు మరియు అనువాదాల ద్వారా పదాలకు జీవం పోశాను.
             </p>
             <div className="mt-10 flex justify-center gap-4">
               <a href="#timeline" className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all">
@@ -185,37 +191,43 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {/* Blog Post 1 */}
-            <article className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-purple-400 to-pink-400"></div>
-              <div className="p-6">
-                <span className="text-sm text-purple-600 font-semibold">Voice Acting</span>
-                <h3 className="text-xl font-bold mt-2 mb-3">The Art of Voice: Finding Your Unique Sound</h3>
-                <p className="text-gray-600 mb-4">Discovering my voice and how I developed my unique style over the years...</p>
-                <a href="#" className="text-purple-600 font-semibold hover:text-pink-600 transition-colors">Read More →</a>
-              </div>
-            </article>
+            <Link href="/blog/1" className="block">
+              <article className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full">
+                <div className="h-48 bg-gradient-to-br from-purple-400 to-pink-400"></div>
+                <div className="p-6">
+                  <span className="text-sm text-purple-600 font-semibold">Voice Acting</span>
+                  <h3 className="text-xl font-bold mt-2 mb-3">The Art of Voice: Finding Your Unique Sound</h3>
+                  <p className="text-gray-600 mb-4">Discovering my voice and how I developed my unique style over the years...</p>
+                  <span className="text-purple-600 font-semibold hover:text-pink-600 transition-colors">Read More →</span>
+                </div>
+              </article>
+            </Link>
 
             {/* Blog Post 2 */}
-            <article className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-pink-400 to-orange-400"></div>
-              <div className="p-6">
-                <span className="text-sm text-pink-600 font-semibold">Radio Memories</span>
-                <h3 className="text-xl font-bold mt-2 mb-3">Behind the Mic: 20 Years of Radio Stories</h3>
-                <p className="text-gray-600 mb-4">From my first day at the radio station to memorable listener interactions...</p>
-                <a href="#" className="text-purple-600 font-semibold hover:text-pink-600 transition-colors">Read More →</a>
-              </div>
-            </article>
+            <Link href="/blog/2" className="block">
+              <article className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full">
+                <div className="h-48 bg-gradient-to-br from-pink-400 to-orange-400"></div>
+                <div className="p-6">
+                  <span className="text-sm text-pink-600 font-semibold">Radio Memories</span>
+                  <h3 className="text-xl font-bold mt-2 mb-3">Behind the Mic: 20 Years of Radio Stories</h3>
+                  <p className="text-gray-600 mb-4">From my first day at the radio station to memorable listener interactions...</p>
+                  <span className="text-purple-600 font-semibold hover:text-pink-600 transition-colors">Read More →</span>
+                </div>
+              </article>
+            </Link>
 
             {/* Blog Post 3 */}
-            <article className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-              <div className="h-48 bg-gradient-to-br from-orange-400 to-yellow-400"></div>
-              <div className="p-6">
-                <span className="text-sm text-orange-600 font-semibold">Translation</span>
-                <h3 className="text-xl font-bold mt-2 mb-3">Bridging Cultures Through Translation</h3>
-                <p className="text-gray-600 mb-4">How translation opens doors to understanding between different cultures...</p>
-                <a href="#" className="text-purple-600 font-semibold hover:text-pink-600 transition-colors">Read More →</a>
-              </div>
-            </article>
+            <Link href="/blog/3" className="block">
+              <article className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow h-full">
+                <div className="h-48 bg-gradient-to-br from-orange-400 to-yellow-400"></div>
+                <div className="p-6">
+                  <span className="text-sm text-orange-600 font-semibold">Translation</span>
+                  <h3 className="text-xl font-bold mt-2 mb-3">Bridging Cultures Through Translation</h3>
+                  <p className="text-gray-600 mb-4">How translation opens doors to understanding between different cultures...</p>
+                  <span className="text-purple-600 font-semibold hover:text-pink-600 transition-colors">Read More →</span>
+                </div>
+              </article>
+            </Link>
           </div>
 
           <div className="text-center mt-12">
@@ -261,8 +273,10 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
-            <p>&copy; 2025 Sudha Devarakonda. All rights reserved.</p>
+          <div className="mt-8 pt-8 border-t border-gray-800 text-center">
+            <p className="text-gray-400 mb-2">&copy; 2025 Sudha Devarakonda. All rights reserved.</p>
+            <p className="text-purple-400 text-lg">ధన్యవాదాలు • మళ్లీ కలుద్దాం!</p>
+            <p className="text-gray-500 text-sm">Thank you • See you again!</p>
           </div>
         </div>
       </footer>
