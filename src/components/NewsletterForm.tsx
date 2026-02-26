@@ -7,64 +7,66 @@ export function NewsletterForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const cleanedEmail = email.trim();
 
-    if (!email || !email.includes("@")) {
+    if (!cleanedEmail || !cleanedEmail.includes("@")) {
       setStatus("error");
-      setMessage("Please enter a valid email address");
+      setMessage("Please enter a valid email address.");
       return;
     }
 
     setStatus("loading");
-
-    // Simulate API call
-    setTimeout(() => {
+    window.setTimeout(() => {
       setStatus("success");
-      setMessage("Thank you for subscribing! 🎉");
+      setMessage("Thanks. Your email was captured in frontend preview mode.");
       setEmail("");
-    }, 1000);
+    }, 500);
   };
 
   return (
-    <div className="max-w-3xl mx-auto text-center">
-      <h2 className="text-3xl font-bold mb-4 text-gray-800">Stay Updated</h2>
-      <p className="text-gray-600 mb-8">Subscribe to get notified about new blog posts and updates</p>
+    <section className="editorial-card relative overflow-hidden p-8">
+      <div className="editorial-lift absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[#2b6777]/15 blur-sm" aria-hidden="true" />
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className="display-font text-4xl font-bold text-[#1e2d39]">Stay Updated</h2>
+        <p className="mt-3 text-[#4d5c66]">
+          Subscribe for updates on new posts, audio drops, and platform announcements.
+        </p>
 
-      {status === "success" ? (
-        <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-xl">
-          <p className="font-semibold text-lg">{message}</p>
-          <button
-            onClick={() => setStatus("idle")}
-            className="mt-3 text-sm text-green-700 hover:text-green-900 underline"
-          >
-            Subscribe another email
-          </button>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 justify-center">
+        <form
+          onSubmit={handleSubmit}
+          className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row"
+        >
+          <label className="sr-only" htmlFor="newsletter-email">
+            Email
+          </label>
           <input
+            id="newsletter-email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => setEmail(event.target.value)}
             placeholder="Enter your email"
             disabled={status === "loading"}
-            className="px-6 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 flex-1 max-w-md disabled:opacity-50"
+            className="w-full flex-1 rounded-full border border-[#c8b397] bg-[#fffefb] px-5 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring disabled:opacity-70"
             required
           />
           <button
             type="submit"
             disabled={status === "loading"}
-            className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-full bg-gradient-to-r from-[#215c66] to-[#b6563f] px-7 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {status === "loading" ? "Subscribing..." : "Subscribe"}
           </button>
         </form>
-      )}
 
-      {status === "error" && (
-        <p className="mt-4 text-red-600 font-semibold">{message}</p>
-      )}
-    </div>
+        {status === "error" ? (
+          <p className="mt-3 text-sm font-medium text-red-600">{message}</p>
+        ) : null}
+        {status === "success" ? (
+          <p className="mt-3 text-sm font-medium text-emerald-600">{message}</p>
+        ) : null}
+      </div>
+    </section>
   );
 }

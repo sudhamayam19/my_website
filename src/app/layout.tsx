@@ -1,20 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Alegreya, Alegreya_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const editorialDisplay = Alegreya({
+  variable: "--font-editorial-display",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const editorialBody = Alegreya_Sans({
+  variable: "--font-editorial-body",
   subsets: ["latin"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Sudha Devarakonda | RJ • Translator • Voice Artist",
-  description: "Official website of Sudha Devarakonda - RJ, Translator, and Voice Artist. Explore my journey, podcasts, videos, and blog.",
+  title: {
+    default: "Sudha Devarakonda | RJ | Translator | Voice Artist",
+    template: "%s | Sudha Devarakonda",
+  },
+  description:
+    "Official website frontend for Sudha Devarakonda. Explore blog posts, media highlights, and admin-ready content management UI.",
 };
 
 export default function RootLayout({
@@ -24,9 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${editorialDisplay.variable} ${editorialBody.variable} antialiased`}>
         {children}
       </body>
     </html>
