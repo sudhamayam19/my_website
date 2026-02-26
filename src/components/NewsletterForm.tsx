@@ -7,7 +7,7 @@ export function NewsletterForm() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const cleanedEmail = email.trim();
 
@@ -18,11 +18,37 @@ export function NewsletterForm() {
     }
 
     setStatus("loading");
-    window.setTimeout(() => {
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: cleanedEmail }),
+      });
+      const data = (await response.json()) as
+        | { alreadySubscribed?: boolean; error?: string }
+        | undefined;
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Unable to save email.");
+      }
+
       setStatus("success");
-      setMessage("Thanks. Your email was captured in frontend preview mode.");
+      setMessage(
+        data?.alreadySubscribed
+          ? "This email is already subscribed."
+          : "Thanks. You are subscribed.",
+      );
       setEmail("");
-    }, 500);
+    } catch (error) {
+      setStatus("error");
+      setMessage(
+        error instanceof Error ? error.message : "Unable to subscribe right now.",
+      );
+    }
   };
 
   return (

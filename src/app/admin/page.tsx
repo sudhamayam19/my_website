@@ -3,7 +3,8 @@ import { AdminSessionControls } from "@/components/admin/AdminSessionControls";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { requireAdmin } from "@/lib/admin-access";
-import { formatDisplayDate, getAdminStats, getBlogPosts } from "@/lib/site-data";
+import { getAdminStats, getBlogPosts } from "@/lib/content-store";
+import { formatDisplayDate } from "@/lib/site-data";
 
 const adminNav = [
   { label: "Home", href: "/" },
@@ -13,8 +14,8 @@ const adminNav = [
 
 export default async function AdminDashboardPage() {
   await requireAdmin("/admin");
-  const stats = getAdminStats();
-  const posts = getBlogPosts({ includeDrafts: true });
+  const stats = await getAdminStats();
+  const posts = await getBlogPosts({ includeDrafts: true });
 
   return (
     <div className="page-shell">
@@ -32,7 +33,7 @@ export default async function AdminDashboardPage() {
                   Admin Dashboard
                 </h1>
                 <p className="mt-3 max-w-2xl text-[#4f5f69]">
-                  The management interface is production-ready on the frontend and now matches the public editorial design system.
+                  Manage published and draft posts with persistent Convex storage.
                 </p>
               </div>
               <AdminSessionControls />

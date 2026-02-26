@@ -6,6 +6,8 @@
     "clean": "node -e \"try{require('node:fs').rmSync('.next',{recursive:true,force:true});console.log('Cleaned .next')}catch(e){console.log('No .next to clean')}\"",
     "dev": "next dev",
     "dev:fresh": "npm run clean && next dev",
+    "convex:dev": "convex dev",
+    "convex:deploy": "convex deploy",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -13,6 +15,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "convex": "^1.32.0",
     "lucide-react": "^0.564.0",
     "next": "15.5.12",
     "next-auth": "^4.24.13",

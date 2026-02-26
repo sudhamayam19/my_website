@@ -3,7 +3,7 @@ import { PostEditor } from "@/components/admin/PostEditor";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { requireAdmin } from "@/lib/admin-access";
-import { getBlogPostById } from "@/lib/site-data";
+import { getBlogPostById } from "@/lib/content-store";
 
 const adminNav = [
   { label: "Home", href: "/" },
@@ -20,7 +20,7 @@ interface EditPostPageProps {
 export default async function EditPostPage({ params }: EditPostPageProps) {
   const { id } = await params;
   await requireAdmin(`/admin/posts/${id}/edit`);
-  const post = getBlogPostById(id);
+  const post = await getBlogPostById(id);
 
   if (!post) {
     notFound();

@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sudha Website (Next.js + Convex + NextAuth)
 
-## Getting Started
+This project is a Next.js app with:
 
-First, run the development server:
+- Public pages (`/`, `/blog`, `/blog/[id]`)
+- Admin panel (`/admin`) protected by Google login and `ADMIN_EMAIL`
+- Convex persistence for posts, comments, and newsletter subscribers
+
+## 1. Install dependencies
+
+```bash
+npm install
+```
+
+## 2. Configure environment
+
+Copy `.env.example` to `.env.local` and fill values:
+
+- `AUTH_SECRET` or `NEXTAUTH_SECRET`
+- `AUTH_GOOGLE_ID`
+- `AUTH_GOOGLE_SECRET`
+- `ADMIN_EMAIL`
+- `NEXT_PUBLIC_CONVEX_URL`
+- `CONVEX_DEPLOYMENT` (needed by Convex CLI)
+
+## 3. Set up Convex deployment
+
+Run Convex setup in an interactive terminal:
+
+```bash
+npx convex dev
+```
+
+This command links the project, deploys functions from `convex/`, and keeps code synced while developing.
+
+## 4. Run Next.js app
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 5. Deploy on Vercel
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Set all env vars in Vercel project settings:
 
-## Learn More
+- `AUTH_SECRET` (or `NEXTAUTH_SECRET`)
+- `AUTH_GOOGLE_ID`
+- `AUTH_GOOGLE_SECRET`
+- `ADMIN_EMAIL`
+- `NEXT_PUBLIC_CONVEX_URL`
 
-To learn more about Next.js, take a look at the following resources:
+For Google OAuth, include Vercel callback URL:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`https://<your-domain>/api/auth/callback/google`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Existing sample posts/comments are seeded automatically to Convex on first read.
+- Admin create/edit now writes persistent data.
+- Blog comments and newsletter subscription now persist in Convex.

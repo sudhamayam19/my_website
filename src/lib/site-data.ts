@@ -149,7 +149,7 @@ export const socialLinks: SocialLink[] = [
   },
 ];
 
-const posts: BlogPost[] = [
+export const defaultBlogPosts: BlogPost[] = [
   {
     id: "1",
     slug: "the-art-of-voice",
@@ -284,7 +284,7 @@ const posts: BlogPost[] = [
   },
 ];
 
-const comments: BlogComment[] = [
+export const defaultBlogComments: BlogComment[] = [
   {
     id: "c1",
     postId: "1",
@@ -307,53 +307,6 @@ const comments: BlogComment[] = [
     createdAt: "2025-01-09T11:20:00.000Z",
   },
 ];
-
-function sortByPublishedDate(data: BlogPost[]): BlogPost[] {
-  return [...data].sort((a, b) => {
-    return (
-      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-    );
-  });
-}
-
-export function getBlogPosts(options?: { includeDrafts?: boolean }): BlogPost[] {
-  const includeDrafts = options?.includeDrafts ?? false;
-  const list = includeDrafts ? posts : posts.filter((post) => post.status === "published");
-  return sortByPublishedDate(list);
-}
-
-export function getFeaturedPosts(limit = 3): BlogPost[] {
-  return sortByPublishedDate(posts.filter((post) => post.featured)).slice(0, limit);
-}
-
-export function getBlogPostById(id: string): BlogPost | undefined {
-  return posts.find((post) => post.id === id);
-}
-
-export function getBlogPostBySlug(slug: string): BlogPost | undefined {
-  return posts.find((post) => post.slug === slug);
-}
-
-export function getBlogCategories(): string[] {
-  return Array.from(new Set(posts.map((post) => post.category)));
-}
-
-export function getCommentsByPostId(postId: string): BlogComment[] {
-  return comments
-    .filter((comment) => comment.postId === postId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-export function getAdminStats() {
-  const allPosts = getBlogPosts({ includeDrafts: true });
-  const publishedPosts = allPosts.filter((post) => post.status === "published");
-  return {
-    totalPosts: allPosts.length,
-    publishedPosts: publishedPosts.length,
-    totalComments: comments.length,
-    categories: getBlogCategories().length,
-  };
-}
 
 export function formatDisplayDate(input: string): string {
   return new Intl.DateTimeFormat("en-US", {

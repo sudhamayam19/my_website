@@ -1,23 +1,20 @@
 "use client";
 
 import { useState } from "react";
-
-export interface CommentPayload {
-  name: string;
-  message: string;
-}
+import type { BlogComment } from "@/lib/site-data";
 
 interface CommentFormProps {
-  onCommentAdded?: (payload: CommentPayload) => void;
+  postId: string;
+  onCommentAdded?: (comment: BlogComment) => void;
 }
 
-export function CommentForm({ onCommentAdded }: CommentFormProps) {
+export function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [feedback, setFeedback] = useState("");
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const cleanName = name.trim();
@@ -30,20 +27,47 @@ export function CommentForm({ onCommentAdded }: CommentFormProps) {
     }
 
     setStatus("loading");
-    window.setTimeout(() => {
-      onCommentAdded?.({ name: cleanName, message: cleanMessage });
+    setFeedback("");
+
+    try {
+      const response = await fetch("/api/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postId,
+          name: cleanName,
+          message: cleanMessage,
+        }),
+      });
+
+      const data = (await response.json()) as
+        | { comment?: BlogComment; error?: string }
+        | undefined;
+
+      if (!response.ok || !data?.comment) {
+        throw new Error(data?.error || "Failed to save comment.");
+      }
+
+      onCommentAdded?.(data.comment);
       setStatus("success");
-      setFeedback("Comment added to this page preview.");
+      setFeedback("Comment posted.");
       setName("");
       setMessage("");
-    }, 500);
+    } catch (error) {
+      setStatus("error");
+      setFeedback(
+        error instanceof Error ? error.message : "Unable to post comment right now.",
+      );
+    }
   };
 
   return (
     <div className="editorial-card mt-8 rounded-2xl p-6">
       <h4 className="display-font text-2xl font-semibold text-[#1f2c38]">Leave a Comment</h4>
       <p className="mt-1 text-sm text-[#50606a]">
-        Comments are currently frontend-only and will be connected to backend later.
+        Share your thoughts. Comments are now saved and shown here.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">

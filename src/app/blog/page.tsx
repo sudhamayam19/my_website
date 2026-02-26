@@ -3,16 +3,13 @@ import { getBlogNav } from "@/components/AuthNav";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import {
-  formatDisplayDate,
-  getBlogCategories,
-  getBlogPosts,
-} from "@/lib/site-data";
+import { getBlogCategories, getBlogPosts } from "@/lib/content-store";
+import { formatDisplayDate } from "@/lib/site-data";
 
 export default async function BlogPage() {
   const blogNav = await getBlogNav();
-  const posts = getBlogPosts();
-  const categories = getBlogCategories();
+  const posts = await getBlogPosts();
+  const categories = await getBlogCategories();
 
   return (
     <div className="page-shell">
@@ -28,7 +25,7 @@ export default async function BlogPage() {
               Blog
             </h1>
             <p className="mt-4 max-w-2xl text-[#4f5f69]">
-              Every post card here is wired to shared frontend data for an easy backend migration.
+              Explore published posts managed from the admin dashboard and stored in Convex.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {categories.map((category) => (

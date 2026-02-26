@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { BlogPost, PostStatus } from "@/lib/site-data";
 
@@ -18,21 +19,30 @@ const gradientOptions = [
   "from-[#455a35] to-[#879f5f]",
 ];
 
+function getTodayDateString(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function PostEditor({ mode, initialPost }: PostEditorProps) {
+  const router = useRouter();
   const [title, setTitle] = useState(initialPost?.title ?? "");
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt ?? "");
   const [category, setCategory] = useState(initialPost?.category ?? "Voice Acting");
+  const [publishedAt, setPublishedAt] = useState(initialPost?.publishedAt ?? getTodayDateString());
   const [readTimeMinutes, setReadTimeMinutes] = useState<number>(
     initialPost?.readTimeMinutes ?? 5,
   );
   const [status, setStatus] = useState<PostStatus>(initialPost?.status ?? "draft");
+  const [featured, setFeatured] = useState(initialPost?.featured ?? false);
   const [coverGradient, setCoverGradient] = useState(
     initialPost?.coverGradient ?? gradientOptions[0],
   );
-  const [contentInput, setContentInput] = useState(
-    initialPost?.content.join("\n\n") ?? "",
+  const [seoDescription, setSeoDescription] = useState(
+    initialPost?.seoDescription ?? initialPost?.excerpt ?? "",
   );
+  const [contentInput, setContentInput] = useState(initialPost?.content.join("\n\n") ?? "");
   const [feedback, setFeedback] = useState("");
+  const [feedbackState, setFeedbackState] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
 
   const previewParagraphs = useMemo(() => {
@@ -42,18 +52,64 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       .filter(Boolean);
   }, [contentInput]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSaving(true);
+    setFeedback("");
+    setFeedbackState("idle");
 
-    window.setTimeout(() => {
+    const payload = {
+      title: title.trim(),
+      excerpt: excerpt.trim(),
+      category: category.trim(),
+      publishedAt,
+      readTimeMinutes,
+      status,
+      featured,
+      coverGradient,
+      seoDescription: seoDescription.trim() || excerpt.trim(),
+      content: previewParagraphs,
+    };
+
+    if (!payload.title || !payload.excerpt || !payload.category || payload.content.length === 0) {
       setIsSaving(false);
-      setFeedback(
-        mode === "create"
-          ? "Draft created in frontend preview mode. Connect backend to persist."
-          : "Post updated in frontend preview mode. Connect backend to persist.",
-      );
-    }, 700);
+      setFeedbackState("error");
+      setFeedback("Title, excerpt, category, and content are required.");
+      return;
+    }
+
+    try {
+      const endpoint =
+        mode === "create" ? "/api/admin/posts" : `/api/admin/posts/${initialPost?.id}`;
+      const method = mode === "create" ? "POST" : "PATCH";
+      const response = await fetch(endpoint, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = (await response.json()) as
+        | { post?: { id: string }; error?: string }
+        | undefined;
+      if (!response.ok || !data?.post?.id) {
+        throw new Error(data?.error || "Failed to save post.");
+      }
+
+      setFeedbackState("success");
+      setFeedback(mode === "create" ? "Post created." : "Post updated.");
+      router.refresh();
+
+      if (mode === "create") {
+        router.push(`/admin/posts/${data.post.id}/edit`);
+      }
+    } catch (error) {
+      setFeedbackState("error");
+      setFeedback(error instanceof Error ? error.message : "Unable to save post.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -64,7 +120,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
             {mode === "create" ? "Create Post" : "Edit Post"}
           </h1>
           <p className="mt-2 text-sm text-[#51616a]">
-            This editor is complete frontend UI and ready for backend wiring.
+            Posts are saved to Convex and shown on the public blog.
           </p>
         </div>
         <Link
@@ -76,15 +132,10 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <form
-          onSubmit={handleSubmit}
-          className="editorial-card p-6 sm:p-8"
-        >
+        <form onSubmit={handleSubmit} className="editorial-card p-6 sm:p-8">
           <div className="grid gap-5">
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[#304b57]">
-                Title
-              </span>
+              <span className="mb-2 block text-sm font-medium text-[#304b57]">Title</span>
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
@@ -95,9 +146,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[#304b57]">
-                Excerpt
-              </span>
+              <span className="mb-2 block text-sm font-medium text-[#304b57]">Excerpt</span>
               <textarea
                 value={excerpt}
                 onChange={(event) => setExcerpt(event.target.value)}
@@ -110,9 +159,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[#304b57]">
-                  Category
-                </span>
+                <span className="mb-2 block text-sm font-medium text-[#304b57]">Category</span>
                 <input
                   value={category}
                   onChange={(event) => setCategory(event.target.value)}
@@ -122,9 +169,17 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[#304b57]">
-                  Read Time
-                </span>
+                <span className="mb-2 block text-sm font-medium text-[#304b57]">Published</span>
+                <input
+                  type="date"
+                  value={publishedAt}
+                  onChange={(event) => setPublishedAt(event.target.value)}
+                  className="w-full rounded-xl border border-[#c8b397] bg-[#fffefb] px-4 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-[#304b57]">Read Time</span>
                 <input
                   type="number"
                   min={1}
@@ -134,11 +189,11 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                   className="w-full rounded-xl border border-[#c8b397] bg-[#fffefb] px-4 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring"
                 />
               </label>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-[#304b57]">
-                  Status
-                </span>
+                <span className="mb-2 block text-sm font-medium text-[#304b57]">Status</span>
                 <select
                   value={status}
                   onChange={(event) => setStatus(event.target.value as PostStatus)}
@@ -148,12 +203,31 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                   <option value="published">Published</option>
                 </select>
               </label>
+
+              <label className="flex items-center gap-2 pt-8 text-sm font-medium text-[#304b57]">
+                <input
+                  type="checkbox"
+                  checked={featured}
+                  onChange={(event) => setFeatured(event.target.checked)}
+                  className="h-4 w-4 rounded border-[#c8b397] text-[#2a6670] focus:ring-[#2a6670]"
+                />
+                Feature on homepage
+              </label>
             </div>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[#304b57]">
-                Cover Gradient
-              </span>
+              <span className="mb-2 block text-sm font-medium text-[#304b57]">SEO Description</span>
+              <textarea
+                value={seoDescription}
+                onChange={(event) => setSeoDescription(event.target.value)}
+                rows={2}
+                className="w-full rounded-xl border border-[#c8b397] bg-[#fffefb] px-4 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring"
+                placeholder="Meta description for search previews"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[#304b57]">Cover Gradient</span>
               <select
                 value={coverGradient}
                 onChange={(event) => setCoverGradient(event.target.value)}
@@ -168,9 +242,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[#304b57]">
-                Content
-              </span>
+              <span className="mb-2 block text-sm font-medium text-[#304b57]">Content</span>
               <textarea
                 value={contentInput}
                 onChange={(event) => setContentInput(event.target.value)}
@@ -188,9 +260,17 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
               disabled={isSaving}
               className="rounded-full bg-gradient-to-r from-[#215c66] to-[#b6563f] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isSaving ? "Saving..." : mode === "create" ? "Create Draft" : "Save Changes"}
+              {isSaving ? "Saving..." : mode === "create" ? "Create Post" : "Save Changes"}
             </button>
-            {feedback ? <p className="text-sm font-medium text-emerald-600">{feedback}</p> : null}
+            {feedback ? (
+              <p
+                className={`text-sm font-medium ${
+                  feedbackState === "error" ? "text-red-600" : "text-emerald-600"
+                }`}
+              >
+                {feedback}
+              </p>
+            ) : null}
           </div>
         </form>
 

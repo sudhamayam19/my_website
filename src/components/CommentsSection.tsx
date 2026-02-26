@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CommentForm, type CommentPayload } from "@/components/CommentForm";
+import { CommentForm } from "@/components/CommentForm";
 import { formatRelativeTime, type BlogComment } from "@/lib/site-data";
 
 interface CommentsSectionProps {
@@ -9,24 +9,11 @@ interface CommentsSectionProps {
   initialComments: BlogComment[];
 }
 
-interface ClientComment extends BlogComment {
-  isLocal?: boolean;
-}
-
 export function CommentsSection({ postId, initialComments }: CommentsSectionProps) {
-  const [comments, setComments] = useState<ClientComment[]>(initialComments);
+  const [comments, setComments] = useState<BlogComment[]>(initialComments);
 
-  const handleCommentAdded = (payload: CommentPayload) => {
-    const localComment: ClientComment = {
-      id: `local-${Date.now()}`,
-      postId,
-      author: payload.name,
-      message: payload.message,
-      createdAt: new Date().toISOString(),
-      isLocal: true,
-    };
-
-    setComments((currentComments) => [localComment, ...currentComments]);
+  const handleCommentAdded = (comment: BlogComment) => {
+    setComments((currentComments) => [comment, ...currentComments]);
   };
 
   return (
@@ -47,11 +34,6 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                 <p className="font-semibold text-[#1e2f3c]">{comment.author}</p>
                 <p className="text-[#60717b]">{formatRelativeTime(comment.createdAt)}</p>
-                {comment.isLocal ? (
-                  <span className="rounded-full bg-[#dfefe8] px-2 py-1 text-xs font-medium text-[#1f6467]">
-                    Local preview
-                  </span>
-                ) : null}
               </div>
               <p className="mt-2 text-sm leading-relaxed text-[#445963]">{comment.message}</p>
             </article>
@@ -63,7 +45,7 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
         )}
       </div>
 
-      <CommentForm onCommentAdded={handleCommentAdded} />
+      <CommentForm postId={postId} onCommentAdded={handleCommentAdded} />
     </section>
   );
 }

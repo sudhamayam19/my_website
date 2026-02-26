@@ -7,10 +7,12 @@ import { ShareButtons } from "@/components/ShareButtons";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import {
-  formatDisplayDate,
   getBlogPostById,
   getBlogPosts,
   getCommentsByPostId,
+} from "@/lib/content-store";
+import {
+  formatDisplayDate,
 } from "@/lib/site-data";
 
 interface BlogPostPageProps {
@@ -23,7 +25,7 @@ export async function generateMetadata({
   params,
 }: BlogPostPageProps): Promise<Metadata> {
   const { id } = await params;
-  const post = getBlogPostById(id);
+  const post = await getBlogPostById(id);
 
   if (!post) {
     return {
@@ -41,14 +43,14 @@ export async function generateMetadata({
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const blogNav = await getBlogNav();
   const { id } = await params;
-  const post = getBlogPostById(id);
+  const post = await getBlogPostById(id);
 
   if (!post || post.status !== "published") {
     notFound();
   }
 
-  const comments = getCommentsByPostId(post.id);
-  const relatedPosts = getBlogPosts()
+  const comments = await getCommentsByPostId(post.id);
+  const relatedPosts = (await getBlogPosts())
     .filter((item) => item.id !== post.id)
     .slice(0, 3);
 

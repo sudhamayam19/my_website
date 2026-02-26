@@ -5,16 +5,16 @@ import { PlatformIcon } from "@/components/PlatformIcon";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TimelineMilestoneCard } from "@/components/TimelineMilestoneCard";
+import { getFeaturedPosts } from "@/lib/content-store";
 import {
   formatDisplayDate,
-  getFeaturedPosts,
   mediaCards,
   timelineEvents,
 } from "@/lib/site-data";
 
 export default async function HomePage() {
   const homeNav = await getHomeNav({ includeJourney: true, includeMedia: true, includeBlog: true });
-  const featuredPosts = getFeaturedPosts(3);
+  const featuredPosts = await getFeaturedPosts(3);
 
   return (
     <div className="page-shell">
@@ -29,9 +29,8 @@ export default async function HomePage() {
                 A crafted voice across radio, podcasts, and language.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#4f5f69]">
-                This is a design-forward frontend build prepared for backend integration.
-                The content layer, admin interface, and comment flow are all in place for
-                a clean Convex connection.
+                A design-forward website powered by Convex for persistent content,
+                comments, and newsletter subscriptions.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="/blog" className="editorial-btn-primary">
@@ -55,10 +54,10 @@ export default async function HomePage() {
                   Structured post metadata and reusable page blocks.
                 </li>
                 <li className="rounded-xl border border-[#d8c8b0] bg-[#fbf4e7] p-4">
-                  Admin drafting and editing UI prepared for backend hooks.
+                  Admin drafting and editing with persistent publishing.
                 </li>
                 <li className="rounded-xl border border-[#d8c8b0] bg-[#fbf4e7] p-4">
-                  Comment section interactions ready for real persistence.
+                  Comment section and newsletter saved in Convex.
                 </li>
               </ul>
             </aside>
