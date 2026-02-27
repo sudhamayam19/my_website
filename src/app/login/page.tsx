@@ -24,7 +24,7 @@ function safeCallbackPath(value?: string): string {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const callbackPath = safeCallbackPath(params.callbackUrl);
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions).catch(() => null);
   const navItems = await getHomeNav({ includeBlog: true });
 
   if (isAdminEmail(session?.user?.email)) {

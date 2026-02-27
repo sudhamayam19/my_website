@@ -10,7 +10,7 @@ interface NavOptions {
 }
 
 export async function getHomeNav(options?: NavOptions): Promise<NavItem[]> {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions).catch(() => null);
   const showAdmin = isAdminEmail(session?.user?.email);
 
   const items: NavItem[] = [{ label: "Home", href: "/" }];
