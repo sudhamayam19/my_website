@@ -35,11 +35,38 @@ let seedPromise: Promise<void> | null = null;
 function getConvexClient() {
   const deploymentUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!deploymentUrl) {
-    throw new Error(
-      "NEXT_PUBLIC_CONVEX_URL is missing. Set it in your environment to enable Convex persistence.",
-    );
+    return null;
   }
   return new ConvexHttpClient(deploymentUrl);
+}
+
+function sortByPublishedDate(data: BlogPost[]): BlogPost[] {
+  return [...data].sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+  );
+}
+
+function getFallbackPosts(options?: { includeDrafts?: boolean }): BlogPost[] {
+  const includeDrafts = options?.includeDrafts ?? false;
+  const list = includeDrafts
+    ? defaultBlogPosts
+    : defaultBlogPosts.filter((post) => post.status === "published");
+  return sortByPublishedDate(list);
+}
+
+function getFallbackComments(postId: string): BlogComment[] {
+  return [...defaultBlogComments]
+    .filter((comment) => comment.postId === postId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+function ensureConvexForWrites(client: ConvexHttpClient | null): ConvexHttpClient {
+  if (!client) {
+    throw new Error(
+      "Persistence is unavailable. Set NEXT_PUBLIC_CONVEX_URL in Vercel and redeploy.",
+    );
+  }
+  return client;
 }
 
 async function ensureSeeded(client: ConvexHttpClient) {
@@ -65,59 +92,111 @@ export async function getBlogPosts(options?: {
   includeDrafts?: boolean;
 }): Promise<BlogPost[]> {
   const client = getConvexClient();
+  if (!client) {
+    return getFallbackPosts(options);
+  }
+
   await ensureSeeded(client);
-  return await client.query(api.content.listPosts, {
-    includeDrafts: options?.includeDrafts ?? false,
-  });
+  try {
+    return await client.query(api.content.listPosts, {
+      includeDrafts: options?.includeDrafts ?? false,
+    });
+  } catch {
+    return getFallbackPosts(options);
+  }
 }
 
 export async function getFeaturedPosts(limit = 3): Promise<BlogPost[]> {
   const client = getConvexClient();
+  if (!client) {
+    return getFallbackPosts().filter((post) => post.featured).slice(0, limit);
+  }
+
   await ensureSeeded(client);
-  return await client.query(api.content.listFeaturedPosts, { limit });
+  try {
+    return await client.query(api.content.listFeaturedPosts, { limit });
+  } catch {
+    return getFallbackPosts().filter((post) => post.featured).slice(0, limit);
+  }
 }
 
 export async function getBlogPostById(id: string): Promise<BlogPost | undefined> {
   const client = getConvexClient();
+  if (!client) {
+    return defaultBlogPosts.find((post) => post.id === id);
+  }
+
   await ensureSeeded(client);
   try {
     const post = await client.query(api.content.getPostById, { id });
     return post ?? undefined;
   } catch {
-    return undefined;
+    return defaultBlogPosts.find((post) => post.id === id);
   }
 }
 
 export async function getBlogCategories(): Promise<string[]> {
   const client = getConvexClient();
+  if (!client) {
+    return Array.from(new Set(getFallbackPosts().map((post) => post.category)));
+  }
+
   await ensureSeeded(client);
-  return await client.query(api.content.listCategories, {});
+  try {
+    return await client.query(api.content.listCategories, {});
+  } catch {
+    return Array.from(new Set(getFallbackPosts().map((post) => post.category)));
+  }
 }
 
 export async function getCommentsByPostId(postId: string): Promise<BlogComment[]> {
   const client = getConvexClient();
+  if (!client) {
+    return getFallbackComments(postId);
+  }
+
   await ensureSeeded(client);
   try {
     return await client.query(api.content.listCommentsByPostId, { postId });
   } catch {
-    return [];
+    return getFallbackComments(postId);
   }
 }
 
 export async function getAdminStats(): Promise<BlogStats> {
   const client = getConvexClient();
+  if (!client) {
+    const allPosts = getFallbackPosts({ includeDrafts: true });
+    return {
+      totalPosts: allPosts.length,
+      publishedPosts: allPosts.filter((post) => post.status === "published").length,
+      totalComments: defaultBlogComments.length,
+      categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
+    };
+  }
+
   await ensureSeeded(client);
-  return await client.query(api.content.getAdminStats, {});
+  try {
+    return await client.query(api.content.getAdminStats, {});
+  } catch {
+    const allPosts = getFallbackPosts({ includeDrafts: true });
+    return {
+      totalPosts: allPosts.length,
+      publishedPosts: allPosts.filter((post) => post.status === "published").length,
+      totalComments: defaultBlogComments.length,
+      categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
+    };
+  }
 }
 
 export async function createPost(input: PostInput): Promise<{ id: string }> {
-  const client = getConvexClient();
+  const client = ensureConvexForWrites(getConvexClient());
   await ensureSeeded(client);
   return await client.mutation(api.content.createPost, { input });
 }
 
 export async function updatePost(id: string, input: PostInput): Promise<{ id: string }> {
-  const client = getConvexClient();
+  const client = ensureConvexForWrites(getConvexClient());
   await ensureSeeded(client);
   return await client.mutation(api.content.updatePost, { id, input });
 }
@@ -127,13 +206,13 @@ export async function addComment(input: {
   author: string;
   message: string;
 }): Promise<BlogComment> {
-  const client = getConvexClient();
+  const client = ensureConvexForWrites(getConvexClient());
   await ensureSeeded(client);
   return await client.mutation(api.content.addComment, input);
 }
 
 export async function addNewsletterSubscriber(email: string): Promise<{ alreadySubscribed: boolean }> {
-  const client = getConvexClient();
+  const client = ensureConvexForWrites(getConvexClient());
   await ensureSeeded(client);
   return await client.mutation(api.content.addNewsletterSubscriber, { email });
 }
