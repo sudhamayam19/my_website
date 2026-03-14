@@ -4,16 +4,22 @@ import { NewsletterForm } from "@/components/NewsletterForm";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getBlogCategories, getBlogPosts } from "@/lib/content-store";
+import { isAdminAuthenticated } from "@/lib/simple-auth";
 import { formatDisplayDate } from "@/lib/site-data";
 
 export default async function BlogPage() {
   const blogNav = await getBlogNav();
   const posts = await getBlogPosts();
   const categories = await getBlogCategories();
+  const showAdminAccess = await isAdminAuthenticated();
 
   return (
     <div className="page-shell">
-      <SiteHeader navItems={blogNav} activeHref="/blog" cta={{ label: "Admin", href: "/admin" }} />
+      <SiteHeader
+        navItems={blogNav}
+        activeHref="/blog"
+        cta={showAdminAccess ? { label: "Admin", href: "/admin" } : undefined}
+      />
 
       <main className="page-inner px-4 pb-10 pt-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

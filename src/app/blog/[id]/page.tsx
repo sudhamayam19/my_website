@@ -11,6 +11,7 @@ import {
   getBlogPosts,
   getCommentsByPostId,
 } from "@/lib/content-store";
+import { isAdminAuthenticated } from "@/lib/simple-auth";
 import {
   formatDisplayDate,
 } from "@/lib/site-data";
@@ -42,6 +43,7 @@ export async function generateMetadata({
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const blogNav = await getBlogNav();
+  const showAdminAccess = await isAdminAuthenticated();
   const { id } = await params;
   const post = await getBlogPostById(id);
 
@@ -56,7 +58,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   return (
     <div className="page-shell">
-      <SiteHeader navItems={blogNav} activeHref="/blog" cta={{ label: "Admin", href: "/admin" }} />
+      <SiteHeader
+        navItems={blogNav}
+        activeHref="/blog"
+        cta={showAdminAccess ? { label: "Admin", href: "/admin" } : undefined}
+      />
 
       <main className="page-inner px-4 pb-10 pt-12 sm:px-6 lg:px-8">
         <article className="mx-auto max-w-4xl">

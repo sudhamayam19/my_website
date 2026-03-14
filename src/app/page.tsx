@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TimelineMilestoneCard } from "@/components/TimelineMilestoneCard";
 import { getFeaturedPosts } from "@/lib/content-store";
+import { isAdminAuthenticated } from "@/lib/simple-auth";
 import {
   formatDisplayDate,
   mediaCards,
@@ -15,6 +16,7 @@ import {
 export default async function HomePage() {
   const homeNav = await getHomeNav({ includeJourney: true, includeMedia: true, includeBlog: true });
   const featuredPosts = await getFeaturedPosts(3);
+  const showAdminAccess = await isAdminAuthenticated();
 
   return (
     <div className="page-shell">
@@ -36,9 +38,11 @@ export default async function HomePage() {
                 <Link href="/blog" className="editorial-btn-primary">
                   Read the blog
                 </Link>
-                <Link href="/admin" className="editorial-btn-secondary">
-                  Open admin
-                </Link>
+                {showAdminAccess ? (
+                  <Link href="/admin" className="editorial-btn-secondary">
+                    Open admin
+                  </Link>
+                ) : null}
               </div>
             </article>
 

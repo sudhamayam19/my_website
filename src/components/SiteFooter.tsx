@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { PlatformIcon } from "@/components/PlatformIcon";
+import { isAdminAuthenticated } from "@/lib/simple-auth";
 import { SITE_NAME, SITE_TAGLINE, socialLinks } from "@/lib/site-data";
 
-const footerNav = [
+const baseFooterNav = [
   { label: "Home", href: "/" },
   { label: "Blog", href: "/blog" },
-  { label: "Admin", href: "/admin" },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const footerNav = [...baseFooterNav];
+  if (await isAdminAuthenticated()) {
+    footerNav.push({ label: "Admin", href: "/admin" });
+  }
+
   return (
     <footer className="mt-20 border-t border-[#c8b397] bg-[#1e2d39] px-4 py-12 text-[#e9ddcd] sm:px-6 lg:px-8">
       <div className="mx-auto grid w-full max-w-7xl gap-10 md:grid-cols-3">
