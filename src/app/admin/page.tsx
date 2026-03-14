@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminSessionControls } from "@/components/admin/AdminSessionControls";
+import { DeletePostButton } from "@/components/admin/DeletePostButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { requireAdmin } from "@/lib/admin-access";
@@ -117,6 +118,7 @@ export default async function AdminDashboardPage() {
                           >
                             Edit
                           </Link>
+                          <DeletePostButton postId={post.id} postTitle={post.title} />
                         </div>
                       </td>
                     </tr>

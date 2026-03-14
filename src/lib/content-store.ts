@@ -238,6 +238,11 @@ export async function updatePost(id: string, input: PostInput): Promise<{ id: st
   return await client.mutation(api.content.updatePost, { id, input });
 }
 
+export async function deletePost(id: string): Promise<{ id: string; deletedComments: number }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.deletePost, { id });
+}
+
 export async function addComment(input: {
   postId: string;
   author: string;

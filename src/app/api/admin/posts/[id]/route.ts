@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/api-auth";
-import { updatePost } from "@/lib/content-store";
+import { deletePost, updatePost } from "@/lib/content-store";
 import { parsePostPayload } from "@/lib/post-payload";
 
 interface RouteContext {
@@ -33,6 +33,26 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Unable to update post.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const isAdmin = await isAdminRequest();
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  try {
+    const { id } = await context.params;
+    const result = await deletePost(id);
+    return NextResponse.json({ post: result });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Unable to delete post.",
       },
       { status: 500 },
     );

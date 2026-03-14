@@ -299,6 +299,30 @@ export const updatePost = mutationGeneric({
   },
 });
 
+export const deletePost = mutationGeneric({
+  args: {
+    id: v.id("posts"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) {
+      throw new Error("Post not found.");
+    }
+
+    const relatedComments = await ctx.db
+      .query("comments")
+      .withIndex("by_postId_createdAtTs", (query) => query.eq("postId", args.id))
+      .collect();
+
+    for (const comment of relatedComments) {
+      await ctx.db.delete(comment._id);
+    }
+
+    await ctx.db.delete(args.id);
+    return { id: String(args.id), deletedComments: relatedComments.length };
+  },
+});
+
 export const addComment = mutationGeneric({
   args: {
     postId: v.id("posts"),
