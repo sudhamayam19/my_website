@@ -155,7 +155,20 @@ export default async function HomePage() {
                 {featuredPosts.map((post) => (
                   <Link key={post.id} href={`/blog/${post.id}`} className="group block">
                     <article className="editorial-card overflow-hidden transition group-hover:-translate-y-1">
-                      <div className={`h-44 bg-gradient-to-br ${post.coverGradient}`} />
+                      <div
+                        className={`h-44 ${
+                          post.coverImageUrl ? "" : `bg-gradient-to-br ${post.coverGradient}`
+                        }`}
+                        style={
+                          post.coverImageUrl
+                            ? {
+                                backgroundImage: `url(${post.coverImageUrl})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                              }
+                            : undefined
+                        }
+                      />
                       <div className="p-6">
                         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
                           <span className="editorial-chip">{post.category}</span>

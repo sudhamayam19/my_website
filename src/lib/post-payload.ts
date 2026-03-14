@@ -35,6 +35,10 @@ export function parsePostPayload(payload: unknown): ParseResult {
     typeof payload.coverGradient === "string"
       ? payload.coverGradient.trim()
       : "from-[#1f6a6d] to-[#4ea59e]";
+  const coverImageUrl =
+    typeof payload.coverImageUrl === "string" && payload.coverImageUrl.trim().length > 0
+      ? payload.coverImageUrl.trim()
+      : undefined;
   const publishedAt =
     typeof payload.publishedAt === "string" && payload.publishedAt.trim().length > 0
       ? payload.publishedAt
@@ -62,6 +66,7 @@ export function parsePostPayload(payload: unknown): ParseResult {
       publishedAt,
       readTimeMinutes,
       coverGradient,
+      coverImageUrl,
       status,
       featured,
       seoDescription: seoDescription || excerpt,

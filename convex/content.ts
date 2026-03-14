@@ -13,6 +13,7 @@ const postInputValidator = v.object({
   publishedAt: v.string(),
   readTimeMinutes: v.number(),
   coverGradient: v.string(),
+  coverImageUrl: v.optional(v.string()),
   status: postStatusValidator,
   featured: v.boolean(),
   seoDescription: v.string(),
@@ -29,6 +30,7 @@ interface PostRecord {
   publishedAtTs: number;
   readTimeMinutes: number;
   coverGradient: string;
+  coverImageUrl?: string;
   status: "published" | "draft";
   featured: boolean;
   seoDescription: string;
@@ -77,6 +79,7 @@ function normalizePostInput(input: {
   publishedAt: string;
   readTimeMinutes: number;
   coverGradient: string;
+  coverImageUrl?: string;
   status: "published" | "draft";
   featured: boolean;
   seoDescription: string;
@@ -88,6 +91,7 @@ function normalizePostInput(input: {
   const seoDescription = input.seoDescription.trim() || excerpt;
   const slug = slugify(input.slug?.trim() || title);
   const readTimeMinutes = Math.max(1, Math.min(60, Math.round(input.readTimeMinutes)));
+  const coverImageUrl = input.coverImageUrl?.trim();
   const { publishedAt, publishedAtTs } = normalizePublishedAt(input.publishedAt);
 
   if (!title || !excerpt || !category || content.length === 0) {
@@ -104,6 +108,7 @@ function normalizePostInput(input: {
     publishedAtTs,
     readTimeMinutes,
     coverGradient: input.coverGradient.trim(),
+    coverImageUrl: coverImageUrl && coverImageUrl.length > 0 ? coverImageUrl : undefined,
     status: input.status,
     featured: input.featured,
     seoDescription,
@@ -151,6 +156,7 @@ function mapPost(doc: PostRecord) {
     publishedAt: doc.publishedAt,
     readTimeMinutes: doc.readTimeMinutes,
     coverGradient: doc.coverGradient,
+    coverImageUrl: doc.coverImageUrl,
     status: doc.status,
     featured: doc.featured,
     seoDescription: doc.seoDescription,

@@ -71,7 +71,20 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </Link>
 
           <header className="editorial-card mt-6 overflow-hidden">
-            <div className={`h-52 bg-gradient-to-br ${post.coverGradient}`} />
+            <div
+              className={`h-52 ${
+                post.coverImageUrl ? "" : `bg-gradient-to-br ${post.coverGradient}`
+              }`}
+              style={
+                post.coverImageUrl
+                  ? {
+                      backgroundImage: `url(${post.coverImageUrl})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                    }
+                  : undefined
+              }
+            />
             <div className="p-8">
               <div className="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
                 <span className="editorial-chip">{post.category}</span>

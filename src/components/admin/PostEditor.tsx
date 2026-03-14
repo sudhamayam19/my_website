@@ -34,6 +34,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
   );
   const [status, setStatus] = useState<PostStatus>(initialPost?.status ?? "draft");
   const [featured, setFeatured] = useState(initialPost?.featured ?? false);
+  const [coverImageUrl, setCoverImageUrl] = useState(initialPost?.coverImageUrl ?? "");
   const [coverGradient, setCoverGradient] = useState(
     initialPost?.coverGradient ?? gradientOptions[0],
   );
@@ -67,6 +68,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       status,
       featured,
       coverGradient,
+      coverImageUrl: coverImageUrl.trim() || undefined,
       seoDescription: seoDescription.trim() || excerpt.trim(),
       content: previewParagraphs,
     };
@@ -227,6 +229,16 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
             </label>
 
             <label className="block">
+              <span className="mb-2 block text-sm font-medium text-[#304b57]">Cover Image URL</span>
+              <input
+                value={coverImageUrl}
+                onChange={(event) => setCoverImageUrl(event.target.value)}
+                className="w-full rounded-xl border border-[#c8b397] bg-[#fffefb] px-4 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring"
+                placeholder="https://example.com/cover.jpg"
+              />
+            </label>
+
+            <label className="block">
               <span className="mb-2 block text-sm font-medium text-[#304b57]">Cover Gradient</span>
               <select
                 value={coverGradient}
@@ -278,7 +290,20 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#2a6670]">
             Live Preview
           </p>
-          <div className={`mt-4 h-32 rounded-2xl bg-gradient-to-br ${coverGradient}`} />
+          <div
+            className={`mt-4 h-32 rounded-2xl ${
+              coverImageUrl ? "" : `bg-gradient-to-br ${coverGradient}`
+            }`}
+            style={
+              coverImageUrl
+                ? {
+                    backgroundImage: `url(${coverImageUrl})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
+          />
           <p className="mt-4 text-xs font-medium uppercase tracking-wide text-[#5f6f79]">
             {category || "Category"}
           </p>

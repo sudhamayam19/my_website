@@ -12,6 +12,7 @@ export default defineSchema({
     publishedAtTs: v.number(),
     readTimeMinutes: v.number(),
     coverGradient: v.string(),
+    coverImageUrl: v.optional(v.string()),
     status: v.union(v.literal("published"), v.literal("draft")),
     featured: v.boolean(),
     seoDescription: v.string(),

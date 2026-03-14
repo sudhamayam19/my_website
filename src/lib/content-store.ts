@@ -25,6 +25,7 @@ export interface PostInput {
   publishedAt: string;
   readTimeMinutes: number;
   coverGradient: string;
+  coverImageUrl?: string;
   status: PostStatus;
   featured: boolean;
   seoDescription: string;
