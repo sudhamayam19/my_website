@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { RichTextRenderer } from "@/components/RichTextRenderer";
 import type { BlogPost, PostStatus } from "@/lib/site-data";
 
 interface PostEditorProps {
@@ -25,6 +26,7 @@ function getTodayDateString(): string {
 
 export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const router = useRouter();
+  const contentRef = useRef<HTMLTextAreaElement | null>(null);
   const [title, setTitle] = useState(initialPost?.title ?? "");
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt ?? "");
   const [category, setCategory] = useState(initialPost?.category ?? "Voice Acting");
@@ -52,6 +54,45 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       .map((value) => value.trim())
       .filter(Boolean);
   }, [contentInput]);
+
+  const insertAroundSelection = (prefix: string, suffix: string, placeholder: string) => {
+    const textarea = contentRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = contentInput.slice(start, end);
+    const coreText = selectedText || placeholder;
+    const replacement = `${prefix}${coreText}${suffix}`;
+    const nextValue = `${contentInput.slice(0, start)}${replacement}${contentInput.slice(end)}`;
+    setContentInput(nextValue);
+
+    window.requestAnimationFrame(() => {
+      textarea.focus();
+      const cursorStart = start + prefix.length;
+      textarea.setSelectionRange(cursorStart, cursorStart + coreText.length);
+    });
+  };
+
+  const insertSnippet = (snippet: string) => {
+    const textarea = contentRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const nextValue = `${contentInput.slice(0, start)}${snippet}${contentInput.slice(end)}`;
+    setContentInput(nextValue);
+
+    window.requestAnimationFrame(() => {
+      const cursorPos = start + snippet.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -255,14 +296,62 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-[#304b57]">Content</span>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => insertAroundSelection("**", "**", "bold text")}
+                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
+                >
+                  Bold
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertAroundSelection("*", "*", "italic text")}
+                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
+                >
+                  Italic
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertAroundSelection("[", "](https://example.com)", "link text")}
+                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
+                >
+                  Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertSnippet("## Heading")}
+                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
+                >
+                  Heading
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertSnippet("- List item 1\n- List item 2")}
+                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
+                >
+                  List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertSnippet("> Quote line")}
+                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
+                >
+                  Quote
+                </button>
+              </div>
               <textarea
+                ref={contentRef}
                 value={contentInput}
                 onChange={(event) => setContentInput(event.target.value)}
                 required
                 rows={13}
                 className="w-full rounded-xl border border-[#c8b397] bg-[#fffefb] px-4 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring"
-                placeholder="Separate paragraphs with a blank line"
+                placeholder="Supports markdown. Separate blocks with a blank line."
               />
+              <p className="mt-2 text-xs text-[#5f6f79]">
+                Tip: use **bold**, *italic*, [link](https://example.com), headings (##), lists (- item), and quotes (&gt; text).
+              </p>
             </label>
           </div>
 
@@ -319,11 +408,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
           <div className="mt-5 space-y-3 border-t border-[#d8c8b0] pt-5">
             {previewParagraphs.length ? (
-              previewParagraphs.slice(0, 3).map((paragraph) => (
-                <p key={paragraph} className="text-sm leading-relaxed text-[#455963]">
-                  {paragraph}
-                </p>
-              ))
+              <RichTextRenderer blocks={previewParagraphs.slice(0, 3)} />
             ) : (
               <p className="text-sm text-[#60717b]">Content preview appears here.</p>
             )}

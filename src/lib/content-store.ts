@@ -34,7 +34,8 @@ export interface PostInput {
 let seedPromise: Promise<void> | null = null;
 
 function getConvexClient() {
-  const deploymentUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
+  const deploymentUrl =
+    process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.NEXT_CONVEX_PUBLIC_URL;
   if (!deploymentUrl) {
     return null;
   }

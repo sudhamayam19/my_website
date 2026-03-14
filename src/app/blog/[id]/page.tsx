@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBlogNav } from "@/components/AuthNav";
 import { CommentsSection } from "@/components/CommentsSection";
+import { RichTextRenderer } from "@/components/RichTextRenderer";
 import { ShareButtons } from "@/components/ShareButtons";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -99,11 +100,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           </header>
 
           <section className="editorial-card mt-8 p-8 sm:p-10">
-            <div className="space-y-5 text-base leading-relaxed text-[#42555f]">
-              {post.content.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </div>
+            <RichTextRenderer blocks={post.content} />
 
             <ShareButtons />
             <CommentsSection postId={post.id} initialComments={comments} />
