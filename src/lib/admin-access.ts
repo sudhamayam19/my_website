@@ -1,13 +1,11 @@
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth-options";
-import { isAdminEmail } from "@/lib/authz";
+import { isAdminAuthenticated } from "@/lib/simple-auth";
 
 export async function requireAdmin(callbackPath: string) {
-  const session = await getServerSession(authOptions).catch(() => null);
-  if (!isAdminEmail(session?.user?.email)) {
+  const isAuthenticated = await isAdminAuthenticated();
+  if (!isAuthenticated) {
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
   }
 
-  return session;
+  return { isAdmin: true };
 }

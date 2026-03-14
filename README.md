@@ -1,9 +1,9 @@
-# Sudha Website (Next.js + Convex + NextAuth)
+# Sudha Website (Next.js + Convex + Simple Admin Auth)
 
 This project is a Next.js app with:
 
 - Public pages (`/`, `/blog`, `/blog/[id]`)
-- Admin panel (`/admin`) protected by Google login and `ADMIN_EMAIL`
+- Admin panel (`/admin`) protected by username/password login
 - Convex persistence for posts, comments, and newsletter subscribers
 
 ## 1. Install dependencies
@@ -17,9 +17,8 @@ npm install
 Copy `.env.example` to `.env.local` and fill values:
 
 - `AUTH_SECRET` or `NEXTAUTH_SECRET`
-- `AUTH_GOOGLE_ID`
-- `AUTH_GOOGLE_SECRET`
-- `ADMIN_EMAIL`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
 - `NEXT_PUBLIC_CONVEX_URL`
 - `CONVEX_DEPLOYMENT` (needed by Convex CLI)
 
@@ -46,14 +45,9 @@ Open http://localhost:3000
 Set all env vars in Vercel project settings:
 
 - `AUTH_SECRET` (or `NEXTAUTH_SECRET`)
-- `AUTH_GOOGLE_ID`
-- `AUTH_GOOGLE_SECRET`
-- `ADMIN_EMAIL`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
 - `NEXT_PUBLIC_CONVEX_URL`
-
-For Google OAuth, include Vercel callback URL:
-
-`https://<your-domain>/api/auth/callback/google`
 
 ## Notes
 

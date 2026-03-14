@@ -1,7 +1,5 @@
-import { getServerSession } from "next-auth";
-import { isAdminEmail } from "@/lib/authz";
-import { authOptions } from "@/lib/auth-options";
 import type { NavItem } from "@/components/SiteHeader";
+import { isAdminAuthenticated } from "@/lib/simple-auth";
 
 interface NavOptions {
   includeJourney?: boolean;
@@ -10,8 +8,7 @@ interface NavOptions {
 }
 
 export async function getHomeNav(options?: NavOptions): Promise<NavItem[]> {
-  const session = await getServerSession(authOptions).catch(() => null);
-  const showAdmin = isAdminEmail(session?.user?.email);
+  const showAdmin = await isAdminAuthenticated();
 
   const items: NavItem[] = [{ label: "Home", href: "/" }];
   if (options?.includeJourney) {
