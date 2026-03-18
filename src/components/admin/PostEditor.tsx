@@ -19,7 +19,7 @@ const gradientOptions = [
   "from-[#8d493d] to-[#c48451]",
   "from-[#455a35] to-[#879f5f]",
 ];
-const maxCoverImageSizeBytes = 1_500_000;
+const maxCoverImageSizeBytes = 5_000_000;
 const maxArticleImageSizeBytes = 5_000_000;
 const formatButtons = [
   { label: "B", title: "Bold", action: "bold" },
@@ -81,6 +81,10 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const [feedbackState, setFeedbackState] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
   const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
+  const [coverImageFeedback, setCoverImageFeedback] = useState("");
+  const [coverImageFeedbackState, setCoverImageFeedbackState] = useState<
+    "idle" | "success" | "error"
+  >("idle");
   const [articleImageFeedback, setArticleImageFeedback] = useState("");
   const [articleImageFeedbackState, setArticleImageFeedbackState] = useState<
     "idle" | "success" | "error"
@@ -362,16 +366,23 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       return;
     }
 
+    setCoverImageFeedback("");
+    setCoverImageFeedbackState("idle");
+
     if (!file.type.startsWith("image/")) {
       setFeedbackState("error");
       setFeedback("Please choose an image file.");
+      setCoverImageFeedbackState("error");
+      setCoverImageFeedback("Please choose an image file.");
       event.target.value = "";
       return;
     }
 
     if (file.size > maxCoverImageSizeBytes) {
       setFeedbackState("error");
-      setFeedback("Cover image must be smaller than 1.5 MB.");
+      setFeedback("Cover image must be smaller than 5 MB.");
+      setCoverImageFeedbackState("error");
+      setCoverImageFeedback("Image is too large. Use a file smaller than 5 MB.");
       event.target.value = "";
       return;
     }
@@ -394,9 +405,13 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       setCoverImageUrl(nextImageUrl);
       setFeedbackState("success");
       setFeedback(`Selected cover image: ${file.name}`);
+      setCoverImageFeedbackState("success");
+      setCoverImageFeedback(`Selected cover image: ${file.name}`);
     } catch (error) {
       setFeedbackState("error");
       setFeedback(error instanceof Error ? error.message : "Unable to upload image.");
+      setCoverImageFeedbackState("error");
+      setCoverImageFeedback(error instanceof Error ? error.message : "Unable to upload image.");
     } finally {
       event.target.value = "";
     }
@@ -406,6 +421,8 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
     setCoverImageUrl("");
     setFeedbackState("idle");
     setFeedback("");
+    setCoverImageFeedbackState("idle");
+    setCoverImageFeedback("");
   };
 
   useEffect(() => {
@@ -678,7 +695,18 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                   className="block w-full text-sm text-[#304b57] file:mr-4 file:rounded-full file:border-0 file:bg-[#215c66] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-95"
                 />
                 <p className="mt-2 text-xs text-[#5f6f79]">
-                  Upload JPG, PNG, WEBP, or another image format up to 1.5 MB.
+                  Upload JPG, PNG, WEBP, or another image format up to 5 MB.
+                </p>
+                <p
+                  className={`mt-2 text-xs ${
+                    coverImageFeedbackState === "error"
+                      ? "text-red-600"
+                      : coverImageFeedbackState === "success"
+                        ? "text-emerald-600"
+                        : "text-[#5f6f79]"
+                  }`}
+                >
+                  {coverImageFeedback || "This image appears at the top of the article card and post header."}
                 </p>
                 {coverImageUrl ? (
                   <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -798,20 +826,15 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#2a6670]">
             Live Preview
           </p>
-          <div
-            className={`mt-4 h-32 rounded-2xl ${
-              coverImageUrl ? "" : `bg-gradient-to-br ${coverGradient}`
-            }`}
-            style={
-              coverImageUrl
-                ? {
-                    backgroundImage: `url(${coverImageUrl})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                  }
-                : undefined
-            }
-          />
+          {coverImageUrl ? (
+            <img
+              src={coverImageUrl}
+              alt={title || "Cover preview"}
+              className="mt-4 h-32 w-full rounded-2xl border border-[#d8c8b0] object-cover"
+            />
+          ) : (
+            <div className={`mt-4 h-32 rounded-2xl bg-gradient-to-br ${coverGradient}`} />
+          )}
           <p className="mt-4 text-xs font-medium uppercase tracking-wide text-[#5f6f79]">
             {category || "Category"}
           </p>
