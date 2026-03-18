@@ -19,8 +19,8 @@ const gradientOptions = [
   "from-[#8d493d] to-[#c48451]",
   "from-[#455a35] to-[#879f5f]",
 ];
-const maxCoverImageSizeBytes = 5_000_000;
-const maxArticleImageSizeBytes = 5_000_000;
+const maxCoverImageSizeBytes = 4_000_000;
+const maxArticleImageSizeBytes = 4_000_000;
 const formatButtons = [
   { label: "B", title: "Bold", action: "bold" },
   { label: "I", title: "Italic", action: "italic" },
@@ -55,6 +55,23 @@ function toEditorSnapshot(value: {
   return JSON.stringify(value);
 }
 
+async function uploadImageFile(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/admin/uploads", {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = (await response.json()) as { url?: string; error?: string } | undefined;
+  if (!response.ok || !data?.url) {
+    throw new Error(data?.error || "Unable to upload image.");
+  }
+
+  return data.url;
+}
+
 export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const router = useRouter();
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
@@ -81,6 +98,8 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const [feedbackState, setFeedbackState] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
   const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
+  const [isUploadingCoverImage, setIsUploadingCoverImage] = useState(false);
+  const [isUploadingArticleImage, setIsUploadingArticleImage] = useState(false);
   const [coverImageFeedback, setCoverImageFeedback] = useState("");
   const [coverImageFeedbackState, setCoverImageFeedbackState] = useState<
     "idle" | "success" | "error"
@@ -321,29 +340,17 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
     if (file.size > maxArticleImageSizeBytes) {
       setFeedbackState("error");
-      setFeedback("Article images must be smaller than 5 MB.");
+      setFeedback("Article images must be smaller than 4 MB.");
       setArticleImageFeedbackState("error");
-      setArticleImageFeedback("Image is too large. Use a file smaller than 5 MB.");
+      setArticleImageFeedback("Image is too large. Use a file smaller than 4 MB.");
       event.target.value = "";
       return;
     }
 
     try {
-      const imageDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === "string") {
-            resolve(reader.result);
-            return;
-          }
-
-          reject(new Error("Unable to read article image."));
-        };
-        reader.onerror = () => reject(new Error("Unable to read article image."));
-        reader.readAsDataURL(file);
-      });
-
-      insertImageAtSelection(`![${file.name}](${imageDataUrl})`);
+      setIsUploadingArticleImage(true);
+      const uploadedUrl = await uploadImageFile(file);
+      insertImageAtSelection(`![${file.name}](${uploadedUrl})`);
       setFeedbackState("success");
       setFeedback(`Inserted image into article: ${file.name}`);
       setArticleImageFeedbackState("success");
@@ -356,6 +363,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
         error instanceof Error ? error.message : "Unable to insert image.",
       );
     } finally {
+      setIsUploadingArticleImage(false);
       event.target.value = "";
     }
   };
@@ -380,28 +388,16 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
     if (file.size > maxCoverImageSizeBytes) {
       setFeedbackState("error");
-      setFeedback("Cover image must be smaller than 5 MB.");
+      setFeedback("Cover image must be smaller than 4 MB.");
       setCoverImageFeedbackState("error");
-      setCoverImageFeedback("Image is too large. Use a file smaller than 5 MB.");
+      setCoverImageFeedback("Image is too large. Use a file smaller than 4 MB.");
       event.target.value = "";
       return;
     }
 
     try {
-      const nextImageUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (typeof reader.result === "string") {
-            resolve(reader.result);
-            return;
-          }
-
-          reject(new Error("Unable to read image file."));
-        };
-        reader.onerror = () => reject(new Error("Unable to read image file."));
-        reader.readAsDataURL(file);
-      });
-
+      setIsUploadingCoverImage(true);
+      const nextImageUrl = await uploadImageFile(file);
       setCoverImageUrl(nextImageUrl);
       setFeedbackState("success");
       setFeedback(`Selected cover image: ${file.name}`);
@@ -413,6 +409,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       setCoverImageFeedbackState("error");
       setCoverImageFeedback(error instanceof Error ? error.message : "Unable to upload image.");
     } finally {
+      setIsUploadingCoverImage(false);
       event.target.value = "";
     }
   };
@@ -695,7 +692,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                   className="block w-full text-sm text-[#304b57] file:mr-4 file:rounded-full file:border-0 file:bg-[#215c66] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-95"
                 />
                 <p className="mt-2 text-xs text-[#5f6f79]">
-                  Upload JPG, PNG, WEBP, or another image format up to 5 MB.
+                  Upload JPG, PNG, WEBP, or another image format up to 4 MB.
                 </p>
                 <p
                   className={`mt-2 text-xs ${
@@ -706,7 +703,10 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                         : "text-[#5f6f79]"
                   }`}
                 >
-                  {coverImageFeedback || "This image appears at the top of the article card and post header."}
+                  {coverImageFeedback ||
+                    (isUploadingCoverImage
+                      ? "Uploading cover image..."
+                      : "This image appears at the top of the article card and post header.")}
                 </p>
                 {coverImageUrl ? (
                   <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -782,7 +782,10 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                         : "text-[#5f6f79]"
                   }`}
                 >
-                  {articleImageFeedback || "Use Image to insert a picture into the article body. Max 5 MB."}
+                  {articleImageFeedback ||
+                    (isUploadingArticleImage
+                      ? "Uploading article image..."
+                      : "Use Image to insert a picture into the article body. Max 4 MB.")}
                 </p>
               </div>
               <textarea

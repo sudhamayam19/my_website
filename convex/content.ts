@@ -261,6 +261,22 @@ export const getAdminStats = queryGeneric({
   },
 });
 
+export const generateUploadUrl = mutationGeneric({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const getStorageUrl = queryGeneric({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
 export const createPost = mutationGeneric({
   args: {
     input: postInputValidator,
