@@ -107,6 +107,20 @@ function renderBlock(block: string, index: number): ReactNode {
     return null;
   }
 
+  const imageMatch = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(trimmed);
+  if (imageMatch) {
+    const alt = imageMatch[1].trim() || "Article image";
+    const src = imageMatch[2].trim();
+    return (
+      <figure key={key} className="space-y-3">
+        <img src={src} alt={alt} className="w-full rounded-3xl border border-[#d8c8b0] object-cover" />
+        {imageMatch[1].trim() ? (
+          <figcaption className="text-sm italic text-[#60717b]">{imageMatch[1].trim()}</figcaption>
+        ) : null}
+      </figure>
+    );
+  }
+
   const headingMatch = /^(#{1,3})\s+(.+)$/.exec(trimmed);
   if (headingMatch) {
     const level = headingMatch[1].length;
@@ -152,6 +166,20 @@ function renderBlock(block: string, index: number): ReactNode {
           <li key={`${key}-item-${lineIndex}`}>{renderInline(line.slice(2), `${key}-${lineIndex}`)}</li>
         ))}
       </ul>
+    );
+  }
+
+  const orderedListPattern = /^\d+\.\s+/;
+  const isOrderedList = lines.length > 0 && lines.every((line) => orderedListPattern.test(line));
+  if (isOrderedList) {
+    return (
+      <ol key={key} className="list-inside list-decimal space-y-1 text-base leading-relaxed text-[#42555f]">
+        {lines.map((line, lineIndex) => (
+          <li key={`${key}-ordered-item-${lineIndex}`}>
+            {renderInline(line.replace(orderedListPattern, ""), `${key}-ordered-${lineIndex}`)}
+          </li>
+        ))}
+      </ol>
     );
   }
 

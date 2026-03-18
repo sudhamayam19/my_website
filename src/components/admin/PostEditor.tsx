@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { RichTextRenderer } from "@/components/RichTextRenderer";
 import type { BlogPost, PostStatus } from "@/lib/site-data";
 
@@ -20,13 +20,18 @@ const gradientOptions = [
   "from-[#455a35] to-[#879f5f]",
 ];
 const maxCoverImageSizeBytes = 1_500_000;
+const maxArticleImageSizeBytes = 1_500_000;
 const formatButtons = [
   { label: "B", title: "Bold", action: "bold" },
   { label: "I", title: "Italic", action: "italic" },
   { label: "U", title: "Underline", action: "underline" },
   { label: "Link", title: "Link", action: "link" },
-  { label: "H2", title: "Heading", action: "heading" },
+  { label: "H1", title: "Large heading", action: "heading1" },
+  { label: "H2", title: "Section heading", action: "heading2" },
+  { label: "H3", title: "Small heading", action: "heading3" },
   { label: "List", title: "List", action: "list" },
+  { label: "1.", title: "Numbered list", action: "orderedList" },
+  { label: "Image", title: "Insert image", action: "image" },
   { label: "Quote", title: "Quote", action: "quote" },
 ] as const;
 
@@ -34,9 +39,26 @@ function getTodayDateString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function toEditorSnapshot(value: {
+  title: string;
+  excerpt: string;
+  category: string;
+  publishedAt: string;
+  readTimeMinutes: number;
+  status: PostStatus;
+  featured: boolean;
+  coverGradient: string;
+  coverImageUrl: string;
+  seoDescription: string;
+  contentInput: string;
+}): string {
+  return JSON.stringify(value);
+}
+
 export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const router = useRouter();
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
+  const articleImageInputRef = useRef<HTMLInputElement | null>(null);
   const [title, setTitle] = useState(initialPost?.title ?? "");
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt ?? "");
   const [category, setCategory] = useState(initialPost?.category ?? "Voice Acting");
@@ -57,6 +79,13 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const [feedback, setFeedback] = useState("");
   const [feedbackState, setFeedbackState] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
+  const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
+
+  const autosaveKey = useMemo(() => {
+    return mode === "edit" && initialPost?.id
+      ? `post-editor-draft:${initialPost.id}`
+      : "post-editor-draft:new";
+  }, [initialPost?.id, mode]);
 
   const previewParagraphs = useMemo(() => {
     return contentInput
@@ -64,6 +93,53 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       .map((value) => value.trim())
       .filter(Boolean);
   }, [contentInput]);
+
+  const editorSnapshot = useMemo(() => {
+    return toEditorSnapshot({
+      title,
+      excerpt,
+      category,
+      publishedAt,
+      readTimeMinutes,
+      status,
+      featured,
+      coverGradient,
+      coverImageUrl,
+      seoDescription,
+      contentInput,
+    });
+  }, [
+    category,
+    contentInput,
+    coverGradient,
+    coverImageUrl,
+    excerpt,
+    featured,
+    publishedAt,
+    readTimeMinutes,
+    seoDescription,
+    status,
+    title,
+  ]);
+
+  const initialSnapshot = useMemo(() => {
+    return toEditorSnapshot({
+      title: initialPost?.title ?? "",
+      excerpt: initialPost?.excerpt ?? "",
+      category: initialPost?.category ?? "Voice Acting",
+      publishedAt: initialPost?.publishedAt ?? getTodayDateString(),
+      readTimeMinutes: initialPost?.readTimeMinutes ?? 5,
+      status: initialPost?.status ?? "draft",
+      featured: initialPost?.featured ?? false,
+      coverGradient: initialPost?.coverGradient ?? gradientOptions[0],
+      coverImageUrl: initialPost?.coverImageUrl ?? "",
+      seoDescription: initialPost?.seoDescription ?? initialPost?.excerpt ?? "",
+      contentInput: initialPost?.content.join("\n\n") ?? "",
+    });
+  }, [initialPost]);
+
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState(initialSnapshot);
+  const isDirty = editorSnapshot !== lastSavedSnapshot;
 
   const insertAroundSelection = (prefix: string, suffix: string, placeholder: string) => {
     const textarea = contentRef.current;
@@ -104,6 +180,30 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
     });
   };
 
+  const insertImageAtSelection = (markdown: string) => {
+    const textarea = contentRef.current;
+    if (!textarea) {
+      setContentInput((current) => (current.trim().length ? `${current}\n\n${markdown}` : markdown));
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const prefix =
+      start > 0 && !contentInput.slice(0, start).endsWith("\n\n") ? "\n\n" : "";
+    const suffix =
+      end < contentInput.length && !contentInput.slice(end).startsWith("\n\n") ? "\n\n" : "";
+    const replacement = `${prefix}${markdown}${suffix}`;
+    const nextValue = `${contentInput.slice(0, start)}${replacement}${contentInput.slice(end)}`;
+    setContentInput(nextValue);
+
+    window.requestAnimationFrame(() => {
+      const cursorPos = start + replacement.length;
+      textarea.focus();
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
+
   const applyToolbarAction = (action: (typeof formatButtons)[number]["action"]) => {
     if (action === "bold") {
       insertAroundSelection("**", "**", "bold text");
@@ -125,8 +225,18 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       return;
     }
 
-    if (action === "heading") {
+    if (action === "heading1") {
+      insertSnippet("# Heading");
+      return;
+    }
+
+    if (action === "heading2") {
       insertSnippet("## Heading");
+      return;
+    }
+
+    if (action === "heading3") {
+      insertSnippet("### Heading");
       return;
     }
 
@@ -135,7 +245,87 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       return;
     }
 
+    if (action === "orderedList") {
+      insertSnippet("1. First item\n2. Second item");
+      return;
+    }
+
+    if (action === "image") {
+      articleImageInputRef.current?.click();
+      return;
+    }
+
     insertSnippet("> Quote line");
+  };
+
+  const handleEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!(event.ctrlKey || event.metaKey)) {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+    if (key === "b") {
+      event.preventDefault();
+      applyToolbarAction("bold");
+      return;
+    }
+
+    if (key === "i") {
+      event.preventDefault();
+      applyToolbarAction("italic");
+      return;
+    }
+
+    if (key === "u") {
+      event.preventDefault();
+      applyToolbarAction("underline");
+    }
+  };
+
+  const handleArticleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setFeedbackState("error");
+      setFeedback("Please choose an image file for the article.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > maxArticleImageSizeBytes) {
+      setFeedbackState("error");
+      setFeedback("Article images must be smaller than 1.5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const imageDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            resolve(reader.result);
+            return;
+          }
+
+          reject(new Error("Unable to read article image."));
+        };
+        reader.onerror = () => reject(new Error("Unable to read article image."));
+        reader.readAsDataURL(file);
+      });
+
+      insertImageAtSelection(`![${file.name}](${imageDataUrl})`);
+      setFeedbackState("success");
+      setFeedback(`Inserted image into article: ${file.name}`);
+    } catch (error) {
+      setFeedbackState("error");
+      setFeedback(error instanceof Error ? error.message : "Unable to insert image.");
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,6 +380,87 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
     setFeedback("");
   };
 
+  useEffect(() => {
+    setLastSavedSnapshot(initialSnapshot);
+  }, [initialSnapshot]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const savedDraft = window.localStorage.getItem(autosaveKey);
+    if (!savedDraft) {
+      setHasHydratedDraft(true);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(savedDraft) as Partial<{
+        title: string;
+        excerpt: string;
+        category: string;
+        publishedAt: string;
+        readTimeMinutes: number;
+        status: PostStatus;
+        featured: boolean;
+        coverGradient: string;
+        coverImageUrl: string;
+        seoDescription: string;
+        contentInput: string;
+      }>;
+
+      if (typeof parsed.title === "string") setTitle(parsed.title);
+      if (typeof parsed.excerpt === "string") setExcerpt(parsed.excerpt);
+      if (typeof parsed.category === "string") setCategory(parsed.category);
+      if (typeof parsed.publishedAt === "string") setPublishedAt(parsed.publishedAt);
+      if (typeof parsed.readTimeMinutes === "number") setReadTimeMinutes(parsed.readTimeMinutes);
+      if (parsed.status === "draft" || parsed.status === "published") setStatus(parsed.status);
+      if (typeof parsed.featured === "boolean") setFeatured(parsed.featured);
+      if (typeof parsed.coverGradient === "string") setCoverGradient(parsed.coverGradient);
+      if (typeof parsed.coverImageUrl === "string") setCoverImageUrl(parsed.coverImageUrl);
+      if (typeof parsed.seoDescription === "string") setSeoDescription(parsed.seoDescription);
+      if (typeof parsed.contentInput === "string") setContentInput(parsed.contentInput);
+      setFeedbackState("success");
+      setFeedback("Recovered your unsaved draft.");
+    } catch {
+      window.localStorage.removeItem(autosaveKey);
+    } finally {
+      setHasHydratedDraft(true);
+    }
+  }, [autosaveKey]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasHydratedDraft) {
+      return;
+    }
+
+    if (editorSnapshot === initialSnapshot) {
+      window.localStorage.removeItem(autosaveKey);
+      return;
+    }
+
+    window.localStorage.setItem(autosaveKey, editorSnapshot);
+  }, [autosaveKey, editorSnapshot, hasHydratedDraft, initialSnapshot]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSaving(true);
@@ -238,6 +509,10 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
       setFeedbackState("success");
       setFeedback(mode === "create" ? "Post created." : "Post updated.");
+      setLastSavedSnapshot(editorSnapshot);
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(autosaveKey);
+      }
       router.refresh();
 
       if (mode === "create") {
@@ -411,6 +686,13 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-[#304b57]">Content</span>
+              <input
+                ref={articleImageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleArticleImageUpload}
+                className="hidden"
+              />
               <div className="mb-3 rounded-2xl border border-[#d7c4aa] bg-[#fff8ed] p-3">
                 <div className="flex flex-wrap gap-2">
                   {formatButtons.map((button) => (
@@ -433,20 +715,21 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                   ))}
                 </div>
                 <p className="mt-3 text-xs text-[#5f6f79]">
-                  Type your text, highlight it with the mouse, then click B, I, or U to format it.
+                  Type your text, highlight it with the mouse, then click B, I, or U to format it. Use Ctrl+B, Ctrl+I, or Ctrl+U for keyboard shortcuts.
                 </p>
               </div>
               <textarea
                 ref={contentRef}
                 value={contentInput}
                 onChange={(event) => setContentInput(event.target.value)}
+                onKeyDown={handleEditorKeyDown}
                 required
                 rows={13}
                 className="w-full rounded-xl border border-[#c8b397] bg-[#fffefb] px-4 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring"
                 placeholder="Supports markdown. Separate blocks with a blank line."
               />
               <p className="mt-2 text-xs text-[#5f6f79]">
-                Tip: this editor supports bold, italic, underline, links, headings, lists, and quotes in the live preview.
+                Tip: this editor supports bold, italic, underline, links, headings, lists, numbered lists, quotes, and uploaded article images in the live preview.
               </p>
             </label>
           </div>
@@ -468,6 +751,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                 {feedback}
               </p>
             ) : null}
+            {isDirty ? <p className="text-sm font-medium text-[#8a5a1d]">Unsaved changes</p> : null}
           </div>
         </form>
 
