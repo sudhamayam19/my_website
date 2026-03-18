@@ -20,6 +20,15 @@ const gradientOptions = [
   "from-[#455a35] to-[#879f5f]",
 ];
 const maxCoverImageSizeBytes = 1_500_000;
+const formatButtons = [
+  { label: "B", title: "Bold", action: "bold" },
+  { label: "I", title: "Italic", action: "italic" },
+  { label: "U", title: "Underline", action: "underline" },
+  { label: "Link", title: "Link", action: "link" },
+  { label: "H2", title: "Heading", action: "heading" },
+  { label: "List", title: "List", action: "list" },
+  { label: "Quote", title: "Quote", action: "quote" },
+] as const;
 
 function getTodayDateString(): string {
   return new Date().toISOString().slice(0, 10);
@@ -93,6 +102,40 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       textarea.focus();
       textarea.setSelectionRange(cursorPos, cursorPos);
     });
+  };
+
+  const applyToolbarAction = (action: (typeof formatButtons)[number]["action"]) => {
+    if (action === "bold") {
+      insertAroundSelection("**", "**", "bold text");
+      return;
+    }
+
+    if (action === "italic") {
+      insertAroundSelection("*", "*", "italic text");
+      return;
+    }
+
+    if (action === "underline") {
+      insertAroundSelection("<u>", "</u>", "underlined text");
+      return;
+    }
+
+    if (action === "link") {
+      insertAroundSelection("[", "](https://example.com)", "link text");
+      return;
+    }
+
+    if (action === "heading") {
+      insertSnippet("## Heading");
+      return;
+    }
+
+    if (action === "list") {
+      insertSnippet("- List item 1\n- List item 2");
+      return;
+    }
+
+    insertSnippet("> Quote line");
   };
 
   const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -368,49 +411,30 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-[#304b57]">Content</span>
-              <div className="mb-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => insertAroundSelection("**", "**", "bold text")}
-                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
-                >
-                  Bold
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertAroundSelection("*", "*", "italic text")}
-                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
-                >
-                  Italic
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertAroundSelection("[", "](https://example.com)", "link text")}
-                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
-                >
-                  Link
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertSnippet("## Heading")}
-                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
-                >
-                  Heading
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertSnippet("- List item 1\n- List item 2")}
-                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
-                >
-                  List
-                </button>
-                <button
-                  type="button"
-                  onClick={() => insertSnippet("> Quote line")}
-                  className="rounded-full border border-[#c8b397] bg-[#fff8ed] px-3 py-1 text-xs font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6]"
-                >
-                  Quote
-                </button>
+              <div className="mb-3 rounded-2xl border border-[#d7c4aa] bg-[#fff8ed] p-3">
+                <div className="flex flex-wrap gap-2">
+                  {formatButtons.map((button) => (
+                    <button
+                      key={button.action}
+                      type="button"
+                      title={button.title}
+                      aria-label={button.title}
+                      onClick={() => applyToolbarAction(button.action)}
+                      className={`min-w-10 rounded-xl border border-[#c8b397] bg-white px-3 py-2 text-sm font-semibold text-[#2f4f5a] transition hover:bg-[#f4e8d6] ${
+                        button.action === "italic"
+                          ? "italic"
+                          : button.action === "underline"
+                            ? "underline"
+                            : ""
+                      }`}
+                    >
+                      {button.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-[#5f6f79]">
+                  Type your text, highlight it with the mouse, then click B, I, or U to format it.
+                </p>
               </div>
               <textarea
                 ref={contentRef}
@@ -422,7 +446,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                 placeholder="Supports markdown. Separate blocks with a blank line."
               />
               <p className="mt-2 text-xs text-[#5f6f79]">
-                Tip: use **bold**, *italic*, [link](https://example.com), headings (##), lists (- item), and quotes (&gt; text).
+                Tip: this editor supports bold, italic, underline, links, headings, lists, and quotes in the live preview.
               </p>
             </label>
           </div>

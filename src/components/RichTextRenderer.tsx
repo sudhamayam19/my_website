@@ -14,7 +14,8 @@ function parseLink(value: string): string | null {
 
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const tokenRegex = /(\[([^\]]+)\]\(([^)]+)\))|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(`([^`]+)`)/g;
+  const tokenRegex =
+    /(<u>([\s\S]+?)<\/u>)|(\[([^\]]+)\]\(([^)]+)\))|(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(`([^`]+)`)/g;
   let lastIndex = 0;
   let matchIndex = 0;
   let match: RegExpExecArray | null;
@@ -28,8 +29,14 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
     }
 
     if (match[1]) {
-      const label = match[2];
-      const href = parseLink(match[3]);
+      nodes.push(
+        <u key={`${keyPrefix}-underline-${matchIndex}`}>
+          {renderInline(match[2], `${keyPrefix}-u${matchIndex}`)}
+        </u>,
+      );
+    } else if (match[3]) {
+      const label = match[4];
+      const href = parseLink(match[5]);
       if (href) {
         nodes.push(
           <a
@@ -43,23 +50,27 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
           </a>,
         );
       } else {
-        nodes.push(match[1]);
+        nodes.push(match[3]);
       }
-    } else if (match[4]) {
-      nodes.push(
-        <strong key={`${keyPrefix}-strong-${matchIndex}`}>{renderInline(match[5], `${keyPrefix}-s${matchIndex}`)}</strong>,
-      );
     } else if (match[6]) {
       nodes.push(
-        <em key={`${keyPrefix}-em-${matchIndex}`}>{renderInline(match[7], `${keyPrefix}-e${matchIndex}`)}</em>,
+        <strong key={`${keyPrefix}-strong-${matchIndex}`}>
+          {renderInline(match[7], `${keyPrefix}-s${matchIndex}`)}
+        </strong>,
       );
     } else if (match[8]) {
+      nodes.push(
+        <em key={`${keyPrefix}-em-${matchIndex}`}>
+          {renderInline(match[9], `${keyPrefix}-e${matchIndex}`)}
+        </em>,
+      );
+    } else if (match[10]) {
       nodes.push(
         <code
           key={`${keyPrefix}-code-${matchIndex}`}
           className="rounded bg-[#efe3d2] px-1 py-0.5 text-[0.92em]"
         >
-          {match[9]}
+          {match[11]}
         </code>,
       );
     }
