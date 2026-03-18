@@ -19,6 +19,7 @@ const gradientOptions = [
   "from-[#8d493d] to-[#c48451]",
   "from-[#455a35] to-[#879f5f]",
 ];
+const maxCoverImageSizeBytes = 1_500_000;
 
 function getTodayDateString(): string {
   return new Date().toISOString().slice(0, 10);
@@ -92,6 +93,58 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       textarea.focus();
       textarea.setSelectionRange(cursorPos, cursorPos);
     });
+  };
+
+  const handleCoverImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setFeedbackState("error");
+      setFeedback("Please choose an image file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > maxCoverImageSizeBytes) {
+      setFeedbackState("error");
+      setFeedback("Cover image must be smaller than 1.5 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const nextImageUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === "string") {
+            resolve(reader.result);
+            return;
+          }
+
+          reject(new Error("Unable to read image file."));
+        };
+        reader.onerror = () => reject(new Error("Unable to read image file."));
+        reader.readAsDataURL(file);
+      });
+
+      setCoverImageUrl(nextImageUrl);
+      setFeedbackState("success");
+      setFeedback(`Selected cover image: ${file.name}`);
+    } catch (error) {
+      setFeedbackState("error");
+      setFeedback(error instanceof Error ? error.message : "Unable to upload image.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveCoverImage = () => {
+    setCoverImageUrl("");
+    setFeedbackState("idle");
+    setFeedback("");
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -269,15 +322,34 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
               />
             </label>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-[#304b57]">Cover Image URL</span>
-              <input
-                value={coverImageUrl}
-                onChange={(event) => setCoverImageUrl(event.target.value)}
-                className="w-full rounded-xl border border-[#c8b397] bg-[#fffefb] px-4 py-3 text-sm outline-none ring-[#2a6670] transition focus:ring"
-                placeholder="https://example.com/cover.jpg"
-              />
-            </label>
+            <div className="block">
+              <span className="mb-2 block text-sm font-medium text-[#304b57]">Cover Image</span>
+              <div className="rounded-2xl border border-dashed border-[#c8b397] bg-[#fffaf2] p-4">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverImageUpload}
+                  className="block w-full text-sm text-[#304b57] file:mr-4 file:rounded-full file:border-0 file:bg-[#215c66] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-95"
+                />
+                <p className="mt-2 text-xs text-[#5f6f79]">
+                  Upload JPG, PNG, WEBP, or another image format up to 1.5 MB.
+                </p>
+                {coverImageUrl ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <p className="text-xs text-[#5f6f79]">
+                      A cover image is selected and will be saved with this post.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoverImage}
+                      className="rounded-full border border-[#c8b397] bg-white px-3 py-1 text-xs font-semibold text-[#304b57] transition hover:bg-[#f5eee3]"
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
 
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-[#304b57]">Cover Gradient</span>
