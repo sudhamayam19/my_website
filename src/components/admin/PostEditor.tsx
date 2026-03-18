@@ -55,6 +55,17 @@ function toEditorSnapshot(value: {
   return JSON.stringify(value);
 }
 
+function hasLegacyInlineImage(value: string): boolean {
+  return value.includes("data:image/");
+}
+
+function scrubLegacyInlineImages(value: string): string {
+  return value.replace(
+    /!\[([^\]]*)\]\(data:image\/[^)]+\)/g,
+    "[Legacy inline image removed. Please upload it again.]",
+  );
+}
+
 async function uploadImageFile(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
@@ -451,6 +462,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
         seoDescription: string;
         contentInput: string;
       }>;
+      let removedLegacyInlineImages = false;
 
       if (typeof parsed.title === "string") setTitle(parsed.title);
       if (typeof parsed.excerpt === "string") setExcerpt(parsed.excerpt);
@@ -460,11 +472,29 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       if (parsed.status === "draft" || parsed.status === "published") setStatus(parsed.status);
       if (typeof parsed.featured === "boolean") setFeatured(parsed.featured);
       if (typeof parsed.coverGradient === "string") setCoverGradient(parsed.coverGradient);
-      if (typeof parsed.coverImageUrl === "string") setCoverImageUrl(parsed.coverImageUrl);
+      if (typeof parsed.coverImageUrl === "string") {
+        if (hasLegacyInlineImage(parsed.coverImageUrl)) {
+          removedLegacyInlineImages = true;
+          setCoverImageUrl("");
+        } else {
+          setCoverImageUrl(parsed.coverImageUrl);
+        }
+      }
       if (typeof parsed.seoDescription === "string") setSeoDescription(parsed.seoDescription);
-      if (typeof parsed.contentInput === "string") setContentInput(parsed.contentInput);
+      if (typeof parsed.contentInput === "string") {
+        if (hasLegacyInlineImage(parsed.contentInput)) {
+          removedLegacyInlineImages = true;
+          setContentInput(scrubLegacyInlineImages(parsed.contentInput));
+        } else {
+          setContentInput(parsed.contentInput);
+        }
+      }
       setFeedbackState("success");
-      setFeedback("Recovered your unsaved draft.");
+      setFeedback(
+        removedLegacyInlineImages
+          ? "Recovered your draft and removed old inline images. Please upload those images again."
+          : "Recovered your unsaved draft.",
+      );
     } catch {
       window.localStorage.removeItem(autosaveKey);
     } finally {
@@ -508,6 +538,15 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
     setIsSaving(true);
     setFeedback("");
     setFeedbackState("idle");
+
+    if (hasLegacyInlineImage(coverImageUrl) || hasLegacyInlineImage(contentInput)) {
+      setIsSaving(false);
+      setFeedbackState("error");
+      setFeedback(
+        "This draft still contains an old inline image. Remove it and upload the image again, then save.",
+      );
+      return;
+    }
 
     const payload = {
       title: title.trim(),
