@@ -20,7 +20,7 @@ const gradientOptions = [
   "from-[#455a35] to-[#879f5f]",
 ];
 const maxCoverImageSizeBytes = 1_500_000;
-const maxArticleImageSizeBytes = 1_500_000;
+const maxArticleImageSizeBytes = 5_000_000;
 const formatButtons = [
   { label: "B", title: "Bold", action: "bold" },
   { label: "I", title: "Italic", action: "italic" },
@@ -59,6 +59,7 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const router = useRouter();
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
   const articleImageInputRef = useRef<HTMLInputElement | null>(null);
+  const articleImageSelectionRef = useRef({ start: 0, end: 0 });
   const [title, setTitle] = useState(initialPost?.title ?? "");
   const [excerpt, setExcerpt] = useState(initialPost?.excerpt ?? "");
   const [category, setCategory] = useState(initialPost?.category ?? "Voice Acting");
@@ -80,6 +81,10 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const [feedbackState, setFeedbackState] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
   const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
+  const [articleImageFeedback, setArticleImageFeedback] = useState("");
+  const [articleImageFeedbackState, setArticleImageFeedbackState] = useState<
+    "idle" | "success" | "error"
+  >("idle");
 
   const autosaveKey = useMemo(() => {
     return mode === "edit" && initialPost?.id
@@ -182,25 +187,30 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
   const insertImageAtSelection = (markdown: string) => {
     const textarea = contentRef.current;
-    if (!textarea) {
-      setContentInput((current) => (current.trim().length ? `${current}\n\n${markdown}` : markdown));
-      return;
-    }
+    const fallbackStart = textarea?.selectionStart ?? contentInput.length;
+    const fallbackEnd = textarea?.selectionEnd ?? contentInput.length;
+    const start = articleImageSelectionRef.current.start ?? fallbackStart;
+    const end = articleImageSelectionRef.current.end ?? fallbackEnd;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const prefix =
-      start > 0 && !contentInput.slice(0, start).endsWith("\n\n") ? "\n\n" : "";
-    const suffix =
-      end < contentInput.length && !contentInput.slice(end).startsWith("\n\n") ? "\n\n" : "";
-    const replacement = `${prefix}${markdown}${suffix}`;
-    const nextValue = `${contentInput.slice(0, start)}${replacement}${contentInput.slice(end)}`;
-    setContentInput(nextValue);
+    setContentInput((current) => {
+      const safeStart = Math.min(start, current.length);
+      const safeEnd = Math.min(end, current.length);
+      const prefix =
+        safeStart > 0 && !current.slice(0, safeStart).endsWith("\n\n") ? "\n\n" : "";
+      const suffix =
+        safeEnd < current.length && !current.slice(safeEnd).startsWith("\n\n") ? "\n\n" : "";
+      return `${current.slice(0, safeStart)}${prefix}${markdown}${suffix}${current.slice(safeEnd)}`;
+    });
 
     window.requestAnimationFrame(() => {
-      const cursorPos = start + replacement.length;
-      textarea.focus();
-      textarea.setSelectionRange(cursorPos, cursorPos);
+      const nextTextarea = contentRef.current;
+      if (!nextTextarea) {
+        return;
+      }
+
+      const cursorPos = Math.min(start + markdown.length + 2, nextTextarea.value.length);
+      nextTextarea.focus();
+      nextTextarea.setSelectionRange(cursorPos, cursorPos);
     });
   };
 
@@ -251,6 +261,11 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
     }
 
     if (action === "image") {
+      const textarea = contentRef.current;
+      articleImageSelectionRef.current = {
+        start: textarea?.selectionStart ?? contentInput.length,
+        end: textarea?.selectionEnd ?? contentInput.length,
+      };
       articleImageInputRef.current?.click();
       return;
     }
@@ -288,16 +303,23 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       return;
     }
 
+    setArticleImageFeedback("");
+    setArticleImageFeedbackState("idle");
+
     if (!file.type.startsWith("image/")) {
       setFeedbackState("error");
       setFeedback("Please choose an image file for the article.");
+      setArticleImageFeedbackState("error");
+      setArticleImageFeedback("Please choose an image file.");
       event.target.value = "";
       return;
     }
 
     if (file.size > maxArticleImageSizeBytes) {
       setFeedbackState("error");
-      setFeedback("Article images must be smaller than 1.5 MB.");
+      setFeedback("Article images must be smaller than 5 MB.");
+      setArticleImageFeedbackState("error");
+      setArticleImageFeedback("Image is too large. Use a file smaller than 5 MB.");
       event.target.value = "";
       return;
     }
@@ -320,9 +342,15 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       insertImageAtSelection(`![${file.name}](${imageDataUrl})`);
       setFeedbackState("success");
       setFeedback(`Inserted image into article: ${file.name}`);
+      setArticleImageFeedbackState("success");
+      setArticleImageFeedback(`Inserted image: ${file.name}`);
     } catch (error) {
       setFeedbackState("error");
       setFeedback(error instanceof Error ? error.message : "Unable to insert image.");
+      setArticleImageFeedbackState("error");
+      setArticleImageFeedback(
+        error instanceof Error ? error.message : "Unable to insert image.",
+      );
     } finally {
       event.target.value = "";
     }
@@ -716,6 +744,17 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
                 </div>
                 <p className="mt-3 text-xs text-[#5f6f79]">
                   Type your text, highlight it with the mouse, then click B, I, or U to format it. Use Ctrl+B, Ctrl+I, or Ctrl+U for keyboard shortcuts.
+                </p>
+                <p
+                  className={`mt-2 text-xs ${
+                    articleImageFeedbackState === "error"
+                      ? "text-red-600"
+                      : articleImageFeedbackState === "success"
+                        ? "text-emerald-600"
+                        : "text-[#5f6f79]"
+                  }`}
+                >
+                  {articleImageFeedback || "Use Image to insert a picture into the article body. Max 5 MB."}
                 </p>
               </div>
               <textarea
