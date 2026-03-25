@@ -16,7 +16,7 @@ function getConvexClient() {
 }
 
 export async function POST(request: Request) {
-  const isAdmin = await isAdminRequest();
+  const isAdmin = await isAdminRequest(request);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

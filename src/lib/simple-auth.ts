@@ -79,6 +79,10 @@ function parseAdminSessionToken(token: string): { username: string; expiresAt: n
   return { username, expiresAt };
 }
 
+export function validateAdminSessionToken(token: string): boolean {
+  return parseAdminSessionToken(token) !== null;
+}
+
 export function validateAdminCredentials(username: string, password: string): boolean {
   const expectedUsername = getAdminUsername();
   const expectedPassword = getAdminPassword();

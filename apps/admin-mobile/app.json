@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Sudha Admin",
+    "slug": "sudha-admin-mobile",
+    "scheme": "sudhaadmin",
+    "version": "1.0.0",
+    "icon": "../../image.png",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-image-picker"
+    ],
+    "splash": {
+      "image": "../../image.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f7efe4"
+    },
+    "android": {
+      "package": "com.sudhamayam.adminmobile",
+      "adaptiveIcon": {
+        "foregroundImage": "../../image.png",
+        "backgroundColor": "#f7efe4"
+      }
+    },
+    "ios": {
+      "supportsTablet": true
+    }
+  }
+}

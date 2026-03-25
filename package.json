@@ -8,6 +8,9 @@
     "dev:fresh": "npm run clean && next dev",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
+    "mobile:install": "npm --prefix apps/admin-mobile install",
+    "mobile:start": "npm --prefix apps/admin-mobile run start",
+    "mobile:android": "npm --prefix apps/admin-mobile run android",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

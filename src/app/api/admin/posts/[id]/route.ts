@@ -10,7 +10,7 @@ interface RouteContext {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const isAdmin = await isAdminRequest();
+  const isAdmin = await isAdminRequest(request);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
@@ -40,7 +40,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const isAdmin = await isAdminRequest();
+  const isAdmin = await isAdminRequest(_request);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }

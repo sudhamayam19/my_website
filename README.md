@@ -5,6 +5,7 @@ This project is a Next.js app with:
 - Public pages (`/`, `/blog`, `/blog/[id]`)
 - Admin panel (`/admin`) protected by username/password login
 - Convex persistence for posts, comments, and newsletter subscribers
+- An in-repo Expo mobile admin scaffold at `apps/admin-mobile`
 
 ## 1. Install dependencies
 
@@ -43,6 +44,29 @@ npm run dev
 ```
 
 Open http://localhost:3000
+
+## Mobile admin app
+
+The repo also contains an Expo app shell for a phone-first admin experience:
+
+```bash
+npm run mobile:install
+npm run mobile:start
+```
+
+The mobile app lives in `apps/admin-mobile` and is scaffolded for Expo Router with 4 tabs:
+
+- Home
+- Posts
+- Comments
+- Profile
+
+Before running the mobile app, create `apps/admin-mobile/.env` from `apps/admin-mobile/.env.example` and set:
+
+- `EXPO_PUBLIC_API_BASE_URL`
+  example: `https://sudhamayam.vercel.app`
+
+For Android APK builds with EAS, run commands from `apps/admin-mobile` after installing the Expo/EAS tooling and signing in.
 
 ## 5. Deploy on Vercel
 

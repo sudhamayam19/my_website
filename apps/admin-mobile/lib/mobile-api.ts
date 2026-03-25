@@ -1,0 +1,163 @@
+import * as SecureStore from "expo-secure-store";
+
+const TOKEN_KEY = "admin_mobile_token";
+
+export interface MobilePost {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string[];
+  category: string;
+  publishedAt: string;
+  readTimeMinutes: number;
+  coverGradient: string;
+  coverImageUrl?: string;
+  status: "draft" | "published";
+  featured: boolean;
+  seoDescription: string;
+}
+
+export interface MobileComment {
+  id: string;
+  postId: string;
+  postTitle?: string;
+  author: string;
+  message: string;
+  createdAt: string;
+}
+
+export interface MobileDashboardResponse {
+  stats: {
+    totalPosts: number;
+    publishedPosts: number;
+    totalComments: number;
+    categories: number;
+  };
+  recentPosts: MobilePost[];
+  recentComments: MobileComment[];
+}
+
+function getApiBaseUrl(): string {
+  const value = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (!value) {
+    throw new Error("EXPO_PUBLIC_API_BASE_URL is missing.");
+  }
+
+  return value.replace(/\/$/, "");
+}
+
+async function getToken(): Promise<string | null> {
+  return await SecureStore.getItemAsync(TOKEN_KEY);
+}
+
+export async function saveToken(token: string): Promise<void> {
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+
+export async function clearToken(): Promise<void> {
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
+
+export async function hasToken(): Promise<boolean> {
+  return Boolean(await getToken());
+}
+
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getToken();
+  const headers = new Headers(init?.headers);
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  if (!(init?.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...init,
+    headers,
+  });
+
+  const data = (await response.json()) as T & { error?: string };
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
+
+  return data;
+}
+
+export async function signIn(username: string, password: string): Promise<void> {
+  const response = await fetch(`${getApiBaseUrl()}/api/mobile/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
+  });
+
+  const data = (await response.json()) as { token?: string; error?: string };
+  if (!response.ok || !data.token) {
+    throw new Error(data.error || "Unable to sign in.");
+  }
+
+  await saveToken(data.token);
+}
+
+export async function fetchDashboard(): Promise<MobileDashboardResponse> {
+  return await apiRequest<MobileDashboardResponse>("/api/mobile/dashboard", {
+    method: "GET",
+  });
+}
+
+export async function fetchPosts(): Promise<MobilePost[]> {
+  const data = await apiRequest<{ posts: MobilePost[] }>("/api/mobile/posts", {
+    method: "GET",
+  });
+  return data.posts;
+}
+
+export async function fetchComments(): Promise<MobileComment[]> {
+  const data = await apiRequest<{ comments: MobileComment[] }>("/api/mobile/comments", {
+    method: "GET",
+  });
+  return data.comments;
+}
+
+export async function uploadImage(fileUri: string, fileName: string, mimeType = "image/jpeg"): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", {
+    uri: fileUri,
+    name: fileName,
+    type: mimeType,
+  } as unknown as Blob);
+
+  const data = await apiRequest<{ url: string }>("/api/admin/uploads", {
+    method: "POST",
+    body: formData,
+  });
+  return data.url;
+}
+
+export async function savePost(input: {
+  id?: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  publishedAt: string;
+  readTimeMinutes: number;
+  status: "draft" | "published";
+  featured: boolean;
+  coverGradient: string;
+  coverImageUrl?: string;
+  seoDescription: string;
+  content: string[];
+}): Promise<{ id: string }> {
+  const path = input.id ? `/api/mobile/posts/${input.id}` : "/api/mobile/posts";
+  const method = input.id ? "PATCH" : "POST";
+  const data = await apiRequest<{ post: { id: string } }>(path, {
+    method,
+    body: JSON.stringify(input),
+  });
+  return data.post;
+}
