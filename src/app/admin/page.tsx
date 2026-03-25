@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { AdminSessionControls } from "@/components/admin/AdminSessionControls";
+import { DeleteCommentButton } from "@/components/admin/DeleteCommentButton";
 import { DeletePostButton } from "@/components/admin/DeletePostButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { requireAdmin } from "@/lib/admin-access";
 import { getAdminStats, getBlogPosts } from "@/lib/content-store";
+import { getRecentComments } from "@/lib/mobile-admin-data";
 import { formatDisplayDate } from "@/lib/site-data";
 
 const adminNav = [
@@ -16,7 +18,10 @@ const adminNav = [
 export default async function AdminDashboardPage() {
   await requireAdmin("/admin");
   const stats = await getAdminStats();
-  const posts = await getBlogPosts({ includeDrafts: true });
+  const [posts, comments] = await Promise.all([
+    getBlogPosts({ includeDrafts: true }),
+    getRecentComments(12),
+  ]);
 
   return (
     <div className="page-shell">
@@ -125,6 +130,41 @@ export default async function AdminDashboardPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </section>
+
+          <section className="editorial-card mt-8 p-6 sm:p-8">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="display-font text-4xl font-bold text-[#1f2d39]">Recent Comments</h2>
+            </div>
+
+            <div className="space-y-4">
+              {comments.length ? (
+                comments.map((comment) => (
+                  <article
+                    key={comment.id}
+                    className="rounded-2xl border border-[#d7c6ae] bg-[#fdf8ef] p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                          <p className="font-semibold text-[#1e2f3c]">{comment.author}</p>
+                          <p className="text-[#60717b]">{formatDisplayDate(comment.createdAt)}</p>
+                        </div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#1f6973]">
+                          {comment.postTitle || "Blog post"}
+                        </p>
+                        <p className="text-sm leading-relaxed text-[#445963]">{comment.message}</p>
+                      </div>
+                      <DeleteCommentButton commentId={comment.id} author={comment.author} />
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="rounded-xl border border-dashed border-[#c9b497] bg-[#fdf8ef] px-4 py-5 text-sm text-[#50616d]">
+                  No comments yet.
+                </p>
+              )}
             </div>
           </section>
         </div>

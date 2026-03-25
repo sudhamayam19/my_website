@@ -382,6 +382,21 @@ export const addComment = mutationGeneric({
   },
 });
 
+export const deleteComment = mutationGeneric({
+  args: {
+    id: v.id("comments"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) {
+      throw new Error("Comment not found.");
+    }
+
+    await ctx.db.delete(args.id);
+    return { id: String(args.id), postId: String(existing.postId) };
+  },
+});
+
 export const addNewsletterSubscriber = mutationGeneric({
   args: {
     email: v.string(),

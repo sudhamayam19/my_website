@@ -1,20 +1,52 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { AuthGuard } from "@/components/auth-guard";
 import { AdminScreen, Card, Pill } from "@/components/screen";
-import { fetchComments, type MobileComment } from "@/lib/mobile-api";
+import { deleteComment, fetchComments, type MobileComment } from "@/lib/mobile-api";
 
 export default function CommentsScreen() {
   const [comments, setComments] = useState<MobileComment[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadComments = () => {
     fetchComments()
       .then(setComments)
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load comments."))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    loadComments();
   }, []);
+
+  const handleDelete = (comment: MobileComment) => {
+    Alert.alert(
+      "Delete comment",
+      `Delete ${comment.author}'s comment?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeletingId(comment.id);
+              await deleteComment(comment.id);
+              setComments((current) => current.filter((item) => item.id !== comment.id));
+            } catch (reason) {
+              setError(reason instanceof Error ? reason.message : "Unable to delete comment.");
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <AuthGuard>
@@ -35,8 +67,17 @@ export default function CommentsScreen() {
               {comments.map((comment) => (
                 <View key={comment.id} style={styles.commentCard}>
                   <View style={styles.row}>
-                    <Text style={styles.author}>{comment.author}</Text>
-                    <Pill label={new Date(comment.createdAt).toLocaleDateString()} tone="teal" />
+                    <View style={styles.rowLeft}>
+                      <Text style={styles.author}>{comment.author}</Text>
+                      <Pill label={new Date(comment.createdAt).toLocaleDateString()} tone="teal" />
+                    </View>
+                    <Pressable style={styles.deleteButton} onPress={() => handleDelete(comment)}>
+                      {deletingId === comment.id ? (
+                        <ActivityIndicator size="small" color="#9a4335" />
+                      ) : (
+                        <Ionicons name="trash-outline" size={18} color="#9a4335" />
+                      )}
+                    </Pressable>
                   </View>
                   <Text style={styles.postTitle}>{comment.postTitle || "Blog post"}</Text>
                   <Text style={styles.message}>{comment.message}</Text>
@@ -74,6 +115,13 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: "center",
   },
+  rowLeft: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "center",
+    flex: 1,
+  },
   author: {
     color: "#19313b",
     fontWeight: "800",
@@ -88,5 +136,13 @@ const styles = StyleSheet.create({
     color: "#445760",
     fontSize: 15,
     lineHeight: 22,
+  },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f7ddd7",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

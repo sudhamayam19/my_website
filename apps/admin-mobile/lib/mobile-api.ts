@@ -124,6 +124,12 @@ export async function fetchComments(): Promise<MobileComment[]> {
   return data.comments;
 }
 
+export async function deleteComment(id: string): Promise<void> {
+  await apiRequest<{ comment: { id: string } }>(`/api/mobile/comments/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function uploadImage(fileUri: string, fileName: string, mimeType = "image/jpeg"): Promise<string> {
   const formData = new FormData();
   formData.append("file", {
