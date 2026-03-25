@@ -21,6 +21,10 @@ Copy `.env.example` to `.env.local` and fill values:
 - `ADMIN_PASSWORD`
 - `NEXT_PUBLIC_CONVEX_URL`
 - `CONVEX_DEPLOYMENT` (needed by Convex CLI)
+- `NEXT_PUBLIC_SITE_URL`
+- `RESEND_API_KEY` (for comment notification emails)
+- `COMMENT_NOTIFICATION_TO`
+- `COMMENT_NOTIFICATION_FROM`
 
 ## 3. Set up Convex deployment
 
@@ -48,6 +52,10 @@ Set all env vars in Vercel project settings:
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
 - `NEXT_PUBLIC_CONVEX_URL`
+- `NEXT_PUBLIC_SITE_URL`
+- `RESEND_API_KEY`
+- `COMMENT_NOTIFICATION_TO`
+- `COMMENT_NOTIFICATION_FROM`
 
 ## Notes
 
