@@ -34,6 +34,12 @@
     },
     "ios": {
       "supportsTablet": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "df0f92cc-ce01-4070-b0af-3d8c52d64cf0"
+      }
     }
   }
 }
