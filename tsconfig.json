@@ -37,6 +37,8 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "apps/admin-mobile",
+    "apps/admin-mobile/**/*"
   ]
 }
