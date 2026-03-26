@@ -1,6 +1,7 @@
 import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "admin_mobile_token";
+const DEFAULT_API_BASE_URL = "https://sudhamayam.vercel.app";
 
 export interface MobilePost {
   id: string;
@@ -38,11 +39,7 @@ export interface MobileDashboardResponse {
 }
 
 function getApiBaseUrl(): string {
-  const value = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
-  if (!value) {
-    throw new Error("EXPO_PUBLIC_API_BASE_URL is missing.");
-  }
-
+  const value = process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || DEFAULT_API_BASE_URL;
   return value.replace(/\/$/, "");
 }
 
