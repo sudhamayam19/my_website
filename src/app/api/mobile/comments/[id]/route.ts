@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/api-auth";
+import { INVALID_COMMENT_ID_MESSAGE, isLikelyPersistentCommentId } from "@/lib/comment-ids";
 import { deleteComment } from "@/lib/content-store";
 
 interface RouteContext {
@@ -16,6 +17,10 @@ export async function DELETE(request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
+    if (!isLikelyPersistentCommentId(id)) {
+      return NextResponse.json({ error: INVALID_COMMENT_ID_MESSAGE }, { status: 400 });
+    }
+
     const result = await deleteComment(id);
     return NextResponse.json({ comment: result });
   } catch (error) {

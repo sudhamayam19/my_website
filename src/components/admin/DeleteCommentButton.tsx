@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { INVALID_COMMENT_ID_MESSAGE, isLikelyPersistentCommentId } from "@/lib/comment-ids";
 
 interface DeleteCommentButtonProps {
   commentId: string;
@@ -13,6 +14,11 @@ export function DeleteCommentButton({ commentId, author }: DeleteCommentButtonPr
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
+    if (!isLikelyPersistentCommentId(commentId)) {
+      window.alert(INVALID_COMMENT_ID_MESSAGE);
+      return;
+    }
+
     const confirmed = window.confirm(`Delete comment from "${author}"?`);
     if (!confirmed) {
       return;

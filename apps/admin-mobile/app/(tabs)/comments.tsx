@@ -5,6 +5,13 @@ import { AuthGuard } from "@/components/auth-guard";
 import { AdminScreen, Card, Pill } from "@/components/screen";
 import { deleteComment, fetchComments, type MobileComment } from "@/lib/mobile-api";
 
+const INVALID_COMMENT_ID_MESSAGE =
+  "This comment is not stored in the live database yet, so it cannot be deleted.";
+
+function isLikelyPersistentCommentId(id: string): boolean {
+  return /^[a-z0-9]{10,}$/i.test(id.trim());
+}
+
 export default function CommentsScreen() {
   const [comments, setComments] = useState<MobileComment[]>([]);
   const [error, setError] = useState("");
@@ -24,6 +31,11 @@ export default function CommentsScreen() {
   }, []);
 
   const handleDelete = (comment: MobileComment) => {
+    if (!isLikelyPersistentCommentId(comment.id)) {
+      setError(INVALID_COMMENT_ID_MESSAGE);
+      return;
+    }
+
     Alert.alert(
       "Delete comment",
       `Delete ${comment.author}'s comment?`,
