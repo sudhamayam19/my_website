@@ -5,6 +5,7 @@ import {
   Image,
   Modal,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   Switch,
@@ -39,6 +40,11 @@ interface PostDraft {
   contentInput: string;
 }
 
+const PUBLIC_SITE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || "https://sudhamayam.vercel.app").replace(
+  /\/$/,
+  "",
+);
+
 function todayString(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -58,6 +64,14 @@ function toDraft(post?: MobilePost): PostDraft {
     seoDescription: post?.seoDescription ?? post?.excerpt ?? "",
     contentInput: post?.content.join("\n\n") ?? "",
   };
+}
+
+function getPublicPostUrl(post: MobilePost): string | null {
+  if (!post.slug) {
+    return null;
+  }
+
+  return `${PUBLIC_SITE_URL}/blog/${post.slug}`;
 }
 
 export default function PostsScreen() {
@@ -118,6 +132,24 @@ export default function PostsScreen() {
     setDraft(toDraft(post));
     setFeedback("");
     setIsModalOpen(true);
+  };
+
+  const handleSharePost = async (post: MobilePost) => {
+    const url = getPublicPostUrl(post);
+    if (!url) {
+      setFeedback("This post does not have a public link yet.");
+      return;
+    }
+
+    try {
+      await Share.share({
+        title: post.title,
+        message: `${post.title}\n\n${url}`,
+        url,
+      });
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Unable to share post.");
+    }
   };
 
   const handlePickCover = async () => {
@@ -234,6 +266,28 @@ export default function PostsScreen() {
               />
               {highlightedPost.featured ? <Pill label="Featured" tone="clay" /> : null}
             </View>
+            <View style={styles.cardActionRow}>
+              <Pressable
+                style={[styles.cardActionButton, styles.cardActionButtonLight]}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  void handleSharePost(highlightedPost);
+                }}
+              >
+                <Ionicons name="share-social-outline" size={16} color="#fffef9" />
+                <Text style={styles.cardActionTextLight}>Share</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.cardActionButton, styles.cardActionButtonDark]}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  openEditPost(highlightedPost);
+                }}
+              >
+                <Ionicons name="create-outline" size={16} color="#fffef9" />
+                <Text style={styles.cardActionTextLight}>Edit</Text>
+              </Pressable>
+            </View>
           </Pressable>
         ) : null}
 
@@ -283,6 +337,28 @@ export default function PostsScreen() {
                     {post.featured ? <Pill label="Featured" tone="clay" /> : null}
                   </View>
                   <Text style={styles.postMetaDate}>{post.publishedAt}</Text>
+                  <View style={styles.cardActionRow}>
+                    <Pressable
+                      style={[styles.cardActionButton, styles.cardActionButtonMuted]}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        void handleSharePost(post);
+                      }}
+                    >
+                      <Ionicons name="share-social-outline" size={16} color="#1f6973" />
+                      <Text style={styles.cardActionTextMuted}>Share</Text>
+                    </Pressable>
+                    <Pressable
+                      style={[styles.cardActionButton, styles.cardActionButtonMuted]}
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        openEditPost(post);
+                      }}
+                    >
+                      <Ionicons name="create-outline" size={16} color="#1f6973" />
+                      <Text style={styles.cardActionTextMuted}>Edit</Text>
+                    </Pressable>
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -524,6 +600,40 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  cardActionRow: {
+    flexDirection: "row",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  cardActionButton: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cardActionButtonLight: {
+    backgroundColor: "rgba(255,255,255,0.14)",
+  },
+  cardActionButtonDark: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  cardActionButtonMuted: {
+    backgroundColor: "#fff8ef",
+    borderWidth: 1,
+    borderColor: "#dcc6a5",
+  },
+  cardActionTextLight: {
+    color: "#fffef9",
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  cardActionTextMuted: {
+    color: "#1f6973",
+    fontWeight: "800",
+    fontSize: 13,
   },
   postCard: {
     backgroundColor: "#f7efe4",

@@ -5,6 +5,7 @@ const DEFAULT_API_BASE_URL = "https://sudhamayam.vercel.app";
 
 export interface MobilePost {
   id: string;
+  slug: string;
   title: string;
   excerpt: string;
   content: string[];
