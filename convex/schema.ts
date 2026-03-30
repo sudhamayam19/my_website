@@ -16,6 +16,7 @@ export default defineSchema({
     status: v.union(v.literal("published"), v.literal("draft")),
     featured: v.boolean(),
     seoDescription: v.string(),
+    views: v.optional(v.number()),
     createdAt: v.string(),
     updatedAt: v.string(),
   })

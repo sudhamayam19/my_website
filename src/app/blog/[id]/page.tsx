@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdSenseAd } from "@/components/AdSenseAd";
 import { getBlogNav } from "@/components/AuthNav";
 import { CommentsSection } from "@/components/CommentsSection";
+import { PostViewTracker } from "@/components/PostViewTracker";
 import { RichTextRenderer } from "@/components/RichTextRenderer";
 import { ShareButtons } from "@/components/ShareButtons";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -59,6 +61,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
   return (
     <div className="page-shell">
+      <PostViewTracker postId={post.id} />
       <SiteHeader
         navItems={blogNav}
         activeHref="/blog"
@@ -101,6 +104,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           <section className="editorial-card mt-8 p-8 sm:p-10">
             <RichTextRenderer blocks={post.content} />
+
+            <AdSenseAd adSlot="AUTO_AD_SLOT_1" className="my-8" />
 
             <ShareButtons />
             <CommentsSection postId={post.id} initialComments={comments} />

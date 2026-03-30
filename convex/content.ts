@@ -40,6 +40,7 @@ interface PostRecord {
   status: "published" | "draft";
   featured: boolean;
   seoDescription: string;
+  views?: number;
 }
 
 interface CommentRecord {
@@ -167,6 +168,7 @@ function mapPost(doc: PostRecord) {
     status: doc.status,
     featured: doc.featured,
     seoDescription: doc.seoDescription,
+    views: doc.views ?? 0,
   };
 }
 
@@ -271,13 +273,53 @@ export const getAdminStats = queryGeneric({
     const posts = await ctx.db.query("posts").collect();
     const comments = await ctx.db.query("comments").collect();
     const categories = new Set(posts.map((post) => post.category));
+    const totalViews = posts.reduce((sum, post) => sum + (post.views ?? 0), 0);
     return {
       totalPosts: posts.length,
       publishedPosts: posts.filter((post) => post.status === "published").length,
       totalComments: comments.length,
       categories: categories.size,
       pendingComments: comments.filter((comment) => (comment.status ?? "approved") === "pending").length,
+      totalViews,
     };
+  },
+});
+
+export const getTopPostsByViews = queryGeneric({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.max(1, Math.min(20, args.limit ?? 5));
+    const docs = await ctx.db
+      .query("posts")
+      .withIndex("by_status_publishedAtTs", (query) => query.eq("status", "published"))
+      .collect();
+
+    return docs
+      .sort((a, b) => (b.views ?? 0) - (a.views ?? 0))
+      .slice(0, limit)
+      .map((doc) => ({
+        id: String(doc._id),
+        title: doc.title,
+        category: doc.category,
+        views: doc.views ?? 0,
+      }));
+  },
+});
+
+export const incrementPostView = mutationGeneric({
+  args: {
+    id: v.id("posts"),
+  },
+  handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.id);
+    if (!post || post.status !== "published") {
+      return;
+    }
+    await ctx.db.patch(args.id, {
+      views: (post.views ?? 0) + 1,
+    });
   },
 });
 

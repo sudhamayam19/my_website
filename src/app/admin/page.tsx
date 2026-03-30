@@ -5,7 +5,7 @@ import { DeletePostButton } from "@/components/admin/DeletePostButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { requireAdmin } from "@/lib/admin-access";
-import { getAdminStats, getBlogPosts } from "@/lib/content-store";
+import { getAdminStats, getBlogPosts, getTopPostsByViews } from "@/lib/content-store";
 import { getRecentComments } from "@/lib/mobile-admin-data";
 import { formatDisplayDate } from "@/lib/site-data";
 
@@ -18,9 +18,10 @@ const adminNav = [
 export default async function AdminDashboardPage() {
   await requireAdmin("/admin");
   const stats = await getAdminStats();
-  const [posts, comments] = await Promise.all([
+  const [posts, comments, topPosts] = await Promise.all([
     getBlogPosts({ includeDrafts: true }),
     getRecentComments(12),
+    getTopPostsByViews(5),
   ]);
 
   return (
@@ -45,7 +46,7 @@ export default async function AdminDashboardPage() {
               <AdminSessionControls />
             </div>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-2xl border border-[#d3c1a8] bg-[#fcf5ea] p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#5f6f79]">
                   Total Posts
@@ -70,8 +71,40 @@ export default async function AdminDashboardPage() {
                 </p>
                 <p className="display-font mt-2 text-4xl font-bold text-[#1f2d39]">{stats.categories}</p>
               </div>
+              <div className="rounded-2xl border border-[#c1d9d8] bg-[#edf7f6] p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#2a6670]">
+                  Total Views
+                </p>
+                <p className="display-font mt-2 text-4xl font-bold text-[#1f2d39]">
+                  {stats.totalViews.toLocaleString()}
+                </p>
+              </div>
             </div>
           </section>
+
+          {topPosts.length > 0 && (
+            <section className="editorial-card mt-8 p-6 sm:p-8">
+              <h2 className="display-font mb-5 text-4xl font-bold text-[#1f2d39]">Top Posts by Views</h2>
+              <div className="space-y-3">
+                {topPosts.map((post, index) => (
+                  <div key={post.id} className="flex items-center gap-4 rounded-xl border border-[#d7c6ae] bg-[#fdf8ef] px-4 py-3">
+                    <span className="display-font w-6 text-center text-lg font-bold text-[#b89572]">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/blog/${post.id}`} className="font-medium text-[#1e2f3b] hover:text-[#2a6670]">
+                        {post.title}
+                      </Link>
+                      <p className="text-xs text-[#5f6f79]">{post.category}</p>
+                    </div>
+                    <span className="text-sm font-semibold text-[#2a6670]">
+                      {post.views.toLocaleString()} views
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="editorial-card mt-8 p-6 sm:p-8">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -88,6 +121,7 @@ export default async function AdminDashboardPage() {
                     <th className="pb-3 font-semibold">Title</th>
                     <th className="pb-3 font-semibold">Category</th>
                     <th className="pb-3 font-semibold">Date</th>
+                    <th className="pb-3 font-semibold">Views</th>
                     <th className="pb-3 font-semibold">Status</th>
                     <th className="pb-3 font-semibold">Actions</th>
                   </tr>
@@ -98,6 +132,7 @@ export default async function AdminDashboardPage() {
                       <td className="py-4 font-medium text-[#1e2f3b]">{post.title}</td>
                       <td className="py-4 text-[#4e5f69]">{post.category}</td>
                       <td className="py-4 text-[#4e5f69]">{formatDisplayDate(post.publishedAt)}</td>
+                      <td className="py-4 text-[#4e5f69]">{(post.views ?? 0).toLocaleString()}</td>
                       <td className="py-4">
                         <span
                           className={`rounded-full px-2 py-1 text-xs font-semibold ${
