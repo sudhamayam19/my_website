@@ -1,4 +1,5 @@
 export type PostStatus = "published" | "draft";
+export type CommentStatus = "approved" | "pending" | "hidden" | "spam";
 
 export interface BlogPost {
   id: string;
@@ -22,6 +23,7 @@ export interface BlogComment {
   author: string;
   message: string;
   createdAt: string;
+  status: CommentStatus;
 }
 
 export interface TimelineEvent {
@@ -292,6 +294,7 @@ export const defaultBlogComments: BlogComment[] = [
     author: "Priya Sharma",
     message: "Strong points on breath control. This helped my daily practice routine.",
     createdAt: "2025-01-03T09:45:00.000Z",
+    status: "approved",
   },
   {
     id: "c2",
@@ -299,6 +302,7 @@ export const defaultBlogComments: BlogComment[] = [
     author: "Rahul Verma",
     message: "The reminder about authenticity is exactly what beginners need to hear.",
     createdAt: "2025-01-05T18:10:00.000Z",
+    status: "approved",
   },
   {
     id: "c3",
@@ -306,6 +310,7 @@ export const defaultBlogComments: BlogComment[] = [
     author: "Neha Reddy",
     message: "Loved the radio memories. Live calls really do create a different energy.",
     createdAt: "2025-01-09T11:20:00.000Z",
+    status: "approved",
   },
 ];
 

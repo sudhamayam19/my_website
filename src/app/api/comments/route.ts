@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addComment, getBlogPostById } from "@/lib/content-store";
 import { sendCommentNotification } from "@/lib/comment-notifications";
+import { sendCommentPushNotifications } from "@/lib/comment-push-notifications";
 
 function asString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -36,6 +37,16 @@ export async function POST(request: Request) {
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
     }).catch((error) => {
       console.error("Failed to send comment notification email.", error);
+    });
+
+    void sendCommentPushNotifications({
+      postId,
+      postTitle: post?.title,
+      author: name,
+      message,
+      status: comment.status,
+    }).catch((error) => {
+      console.error("Failed to send comment push notification.", error);
     });
 
     return NextResponse.json({ comment });

@@ -5,6 +5,7 @@ import {
   defaultBlogPosts,
   type BlogComment,
   type BlogPost,
+  type CommentStatus,
   type PostStatus,
 } from "@/lib/site-data";
 
@@ -15,6 +16,7 @@ export interface BlogStats {
   publishedPosts: number;
   totalComments: number;
   categories: number;
+  pendingComments: number;
 }
 
 export interface PostInput {
@@ -176,21 +178,32 @@ export async function getBlogCategories(): Promise<string[]> {
   }
 }
 
-export async function getCommentsByPostId(postId: string): Promise<BlogComment[]> {
+export async function getCommentsByPostId(
+  postId: string,
+  options?: {
+    includeStatuses?: CommentStatus[];
+  },
+): Promise<BlogComment[]> {
   const client = getConvexClient();
+  const includeStatuses = options?.includeStatuses ?? ["approved"];
+  const filterFallback = (comments: BlogComment[]) =>
+    includeStatuses?.length
+      ? comments.filter((comment) => includeStatuses.includes(comment.status))
+      : comments;
+
   if (!client) {
-    return getFallbackComments(postId);
+    return filterFallback(getFallbackComments(postId));
   }
 
   const isReady = await tryEnsureSeeded(client);
   if (!isReady) {
-    return getFallbackComments(postId);
+    return filterFallback(getFallbackComments(postId));
   }
 
   try {
-    return await client.query(api.content.listCommentsByPostId, { postId });
+    return await client.query(api.content.listCommentsByPostId, { postId, includeStatuses });
   } catch {
-    return getFallbackComments(postId);
+    return filterFallback(getFallbackComments(postId));
   }
 }
 
@@ -203,6 +216,7 @@ export async function getAdminStats(): Promise<BlogStats> {
       publishedPosts: allPosts.filter((post) => post.status === "published").length,
       totalComments: defaultBlogComments.length,
       categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
+      pendingComments: defaultBlogComments.filter((comment) => comment.status === "pending").length,
     };
   }
 
@@ -214,6 +228,7 @@ export async function getAdminStats(): Promise<BlogStats> {
       publishedPosts: allPosts.filter((post) => post.status === "published").length,
       totalComments: defaultBlogComments.length,
       categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
+      pendingComments: defaultBlogComments.filter((comment) => comment.status === "pending").length,
     };
   }
 
@@ -226,6 +241,7 @@ export async function getAdminStats(): Promise<BlogStats> {
       publishedPosts: allPosts.filter((post) => post.status === "published").length,
       totalComments: defaultBlogComments.length,
       categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
+      pendingComments: defaultBlogComments.filter((comment) => comment.status === "pending").length,
     };
   }
 }
@@ -248,6 +264,41 @@ export async function deletePost(id: string): Promise<{ id: string; deletedComme
 export async function deleteComment(id: string): Promise<{ id: string; postId: string }> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.deleteComment, { id });
+}
+
+export async function updateCommentStatus(
+  id: string,
+  status: CommentStatus,
+): Promise<{ id: string; postId: string; status: CommentStatus }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.updateCommentStatus, { id, status });
+}
+
+export async function registerAdminPushToken(
+  token: string,
+  platform: string,
+): Promise<{ token: string; platform: string }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.registerAdminDeviceToken, { token, platform });
+}
+
+export async function getAdminPushTokens(): Promise<string[]> {
+  const client = getConvexClient();
+  if (!client) {
+    return [];
+  }
+
+  const isReady = await tryEnsureSeeded(client);
+  if (!isReady) {
+    return [];
+  }
+
+  try {
+    const tokens = await client.query(api.content.listAdminDeviceTokens, {});
+    return tokens.map((item: { token: string }) => item.token);
+  } catch {
+    return [];
+  }
 }
 
 export async function addComment(input: {

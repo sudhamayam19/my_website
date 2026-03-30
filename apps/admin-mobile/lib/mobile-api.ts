@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 
 const TOKEN_KEY = "admin_mobile_token";
 const DEFAULT_API_BASE_URL = "https://sudhamayam.vercel.app";
+export type MobileCommentStatus = "approved" | "pending" | "hidden" | "spam";
 
 export interface MobilePost {
   id: string;
@@ -26,6 +27,7 @@ export interface MobileComment {
   author: string;
   message: string;
   createdAt: string;
+  status: MobileCommentStatus;
 }
 
 export interface MobileDashboardResponse {
@@ -34,6 +36,7 @@ export interface MobileDashboardResponse {
     publishedPosts: number;
     totalComments: number;
     categories: number;
+    pendingComments: number;
   };
   recentPosts: MobilePost[];
   recentComments: MobileComment[];
@@ -122,9 +125,35 @@ export async function fetchComments(): Promise<MobileComment[]> {
   return data.comments;
 }
 
+export async function deletePost(id: string): Promise<void> {
+  await apiRequest<{ post: { id: string } }>(`/api/mobile/posts/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function deleteComment(id: string): Promise<void> {
   await apiRequest<{ comment: { id: string } }>(`/api/mobile/comments/${id}`, {
     method: "DELETE",
+  });
+}
+
+export async function updateCommentStatus(
+  id: string,
+  status: MobileCommentStatus,
+): Promise<void> {
+  await apiRequest<{ comment: { id: string; status: MobileCommentStatus } }>(
+    `/api/mobile/comments/${id}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    },
+  );
+}
+
+export async function registerPushToken(token: string, platform: string): Promise<void> {
+  await apiRequest<{ registration: { token: string } }>("/api/mobile/push-tokens", {
+    method: "POST",
+    body: JSON.stringify({ token, platform }),
   });
 }
 

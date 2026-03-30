@@ -2,6 +2,12 @@ import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 
 const postStatusValidator = v.union(v.literal("published"), v.literal("draft"));
+const commentStatusValidator = v.union(
+  v.literal("approved"),
+  v.literal("pending"),
+  v.literal("hidden"),
+  v.literal("spam"),
+);
 
 const postInputValidator = v.object({
   id: v.optional(v.string()),
@@ -43,6 +49,7 @@ interface CommentRecord {
   message: string;
   createdAt: string;
   createdAtTs: number;
+  status?: "approved" | "pending" | "hidden" | "spam";
 }
 
 function slugify(value: string): string {
@@ -170,6 +177,7 @@ function mapComment(doc: CommentRecord) {
     author: doc.author,
     message: doc.message,
     createdAt: doc.createdAt,
+    status: doc.status ?? "approved",
   };
 }
 
@@ -235,6 +243,7 @@ export const listCategories = queryGeneric({
 export const listCommentsByPostId = queryGeneric({
   args: {
     postId: v.id("posts"),
+    includeStatuses: v.optional(v.array(commentStatusValidator)),
   },
   handler: async (ctx, args) => {
     const docs = await ctx.db
@@ -242,7 +251,17 @@ export const listCommentsByPostId = queryGeneric({
       .withIndex("by_postId_createdAtTs", (query) => query.eq("postId", args.postId))
       .collect();
 
-    return docs.sort((a, b) => b.createdAtTs - a.createdAtTs).map(mapComment);
+    const includeStatuses = args.includeStatuses;
+    return docs
+      .filter((doc) => {
+        if (!includeStatuses?.length) {
+          return true;
+        }
+
+        return includeStatuses.includes(doc.status ?? "approved");
+      })
+      .sort((a, b) => b.createdAtTs - a.createdAtTs)
+      .map(mapComment);
   },
 });
 
@@ -257,7 +276,19 @@ export const getAdminStats = queryGeneric({
       publishedPosts: posts.filter((post) => post.status === "published").length,
       totalComments: comments.length,
       categories: categories.size,
+      pendingComments: comments.filter((comment) => (comment.status ?? "approved") === "pending").length,
     };
+  },
+});
+
+export const listAdminDeviceTokens = queryGeneric({
+  args: {},
+  handler: async (ctx) => {
+    const tokens = await ctx.db.query("adminDeviceTokens").collect();
+    return tokens.map((item) => ({
+      token: item.token,
+      platform: item.platform,
+    }));
   },
 });
 
@@ -370,6 +401,7 @@ export const addComment = mutationGeneric({
       message,
       createdAt: now,
       createdAtTs: Date.parse(now),
+      status: "pending",
     });
 
     return {
@@ -378,6 +410,30 @@ export const addComment = mutationGeneric({
       author,
       message,
       createdAt: now,
+      status: "pending",
+    };
+  },
+});
+
+export const updateCommentStatus = mutationGeneric({
+  args: {
+    id: v.id("comments"),
+    status: commentStatusValidator,
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) {
+      throw new Error("Comment not found.");
+    }
+
+    await ctx.db.patch(args.id, {
+      status: args.status,
+    });
+
+    return {
+      id: String(args.id),
+      postId: String(existing.postId),
+      status: args.status,
     };
   },
 });
@@ -394,6 +450,50 @@ export const deleteComment = mutationGeneric({
 
     await ctx.db.delete(args.id);
     return { id: String(args.id), postId: String(existing.postId) };
+  },
+});
+
+export const registerAdminDeviceToken = mutationGeneric({
+  args: {
+    token: v.string(),
+    platform: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const token = args.token.trim();
+    const platform = args.platform.trim() || "unknown";
+    if (!token) {
+      throw new Error("Push token is required.");
+    }
+
+    const existing = await ctx.db
+      .query("adminDeviceTokens")
+      .withIndex("by_token", (query) => query.eq("token", token))
+      .first();
+
+    const now = new Date().toISOString();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        platform,
+        updatedAt: now,
+      });
+
+      return {
+        token,
+        platform,
+      };
+    }
+
+    await ctx.db.insert("adminDeviceTokens", {
+      token,
+      platform,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      token,
+      platform,
+    };
   },
 });
 
@@ -436,6 +536,7 @@ export const seedDefaults = mutationGeneric({
         author: v.string(),
         message: v.string(),
         createdAt: v.string(),
+        status: v.optional(commentStatusValidator),
       }),
     ),
   },
@@ -505,6 +606,7 @@ export const seedDefaults = mutationGeneric({
         message,
         createdAt: iso,
         createdAtTs: ts,
+        status: inputComment.status ?? "approved",
       });
       insertedComments += 1;
     }

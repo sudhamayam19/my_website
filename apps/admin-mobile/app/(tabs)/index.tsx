@@ -45,6 +45,10 @@ export default function HomeScreen() {
                   <Pill label="Comments" tone="clay" />
                   <Text style={styles.statValue}>{data.stats.totalComments}</Text>
                 </View>
+                <View style={styles.statTile}>
+                  <Pill label="Pending" />
+                  <Text style={styles.statValue}>{data.stats.pendingComments}</Text>
+                </View>
               </View>
             </Card>
             <Card title="Recent posts">

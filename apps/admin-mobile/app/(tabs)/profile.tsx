@@ -3,12 +3,14 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { Ionicons } from "@expo/vector-icons";
 import { AdminScreen, Card, Pill } from "@/components/screen";
 import { useAuth } from "@/lib/auth";
+import { registerForCommentNotificationsAsync } from "@/lib/notifications";
 
 export default function ProfileScreen() {
   const { isAuthenticated, signInWithPassword, signOut } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
 
   const handleSignIn = async () => {
@@ -28,6 +30,19 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     await signOut();
     setFeedback("Signed out.");
+  };
+
+  const handleEnableNotifications = async () => {
+    setNotificationsLoading(true);
+    setFeedback("");
+    try {
+      await registerForCommentNotificationsAsync();
+      setFeedback("Comment alerts are now enabled on this phone.");
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Unable to enable notifications.");
+    } finally {
+      setNotificationsLoading(false);
+    }
   };
 
   return (
@@ -66,6 +81,20 @@ export default function ProfileScreen() {
               <Ionicons name="checkmark-circle" size={22} color="#1f6973" />
               <Text style={styles.signedInText}>Everything is ready. You can use the other tabs now.</Text>
             </View>
+            <Pressable
+              style={styles.notificationButton}
+              onPress={handleEnableNotifications}
+              disabled={notificationsLoading}
+            >
+              {notificationsLoading ? (
+                <ActivityIndicator color="#1f6973" />
+              ) : (
+                <>
+                  <Ionicons name="notifications-outline" size={18} color="#1f6973" />
+                  <Text style={styles.notificationButtonText}>Enable comment alerts</Text>
+                </>
+              )}
+            </Pressable>
             <Pressable style={styles.secondaryButton} onPress={handleSignOut}>
               <Text style={styles.secondaryButtonText}>Sign Out</Text>
             </Pressable>
@@ -115,6 +144,10 @@ export default function ProfileScreen() {
         <View style={styles.noteRow}>
           <Ionicons name="image-outline" size={18} color="#1f6973" />
           <Text style={styles.noteText}>You can upload a cover image directly from the phone.</Text>
+        </View>
+        <View style={styles.noteRow}>
+          <Ionicons name="notifications-outline" size={18} color="#1f6973" />
+          <Text style={styles.noteText}>Enable alerts here to get a phone notification when someone comments.</Text>
         </View>
       </Card>
 
@@ -199,6 +232,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: "center",
+  },
+  notificationButton: {
+    backgroundColor: "#e5f0ee",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 10,
+  },
+  notificationButtonText: {
+    color: "#1f6973",
+    fontWeight: "900",
+    fontSize: 15,
   },
   secondaryButtonText: {
     color: "#fffef9",

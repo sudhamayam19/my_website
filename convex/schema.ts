@@ -29,7 +29,22 @@ export default defineSchema({
     message: v.string(),
     createdAt: v.string(),
     createdAtTs: v.number(),
+    status: v.optional(
+      v.union(
+        v.literal("approved"),
+        v.literal("pending"),
+        v.literal("hidden"),
+        v.literal("spam"),
+      ),
+    ),
   }).index("by_postId_createdAtTs", ["postId", "createdAtTs"]),
+
+  adminDeviceTokens: defineTable({
+    token: v.string(),
+    platform: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_token", ["token"]),
 
   newsletterSubscribers: defineTable({
     email: v.string(),
