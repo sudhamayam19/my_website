@@ -50,13 +50,9 @@ export function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
         throw new Error(data?.error || "Failed to save comment.");
       }
 
-      if (data.comment.status === "approved") {
-        onCommentAdded?.(data.comment);
-      }
+      onCommentAdded?.(data.comment);
       setStatus("success");
-      setFeedback(
-        data.comment.status === "pending" ? "Comment sent for approval." : "Comment posted.",
-      );
+      setFeedback("Comment posted.");
       setName("");
       setMessage("");
     } catch (error) {
@@ -71,7 +67,7 @@ export function CommentForm({ postId, onCommentAdded }: CommentFormProps) {
     <div className="editorial-card mt-8 rounded-2xl p-6">
       <h4 className="display-font text-2xl font-semibold text-[#1f2c38]">Leave a Comment</h4>
       <p className="mt-1 text-sm text-[#50606a]">
-        Share your thoughts. New comments are reviewed before appearing publicly.
+        Share your thoughts. Comments appear right away unless they are hidden later.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">

@@ -40,7 +40,7 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
           ))
         ) : (
           <p className="rounded-xl border border-dashed border-[#c9b497] bg-[#fdf8ef] px-4 py-5 text-sm text-[#50616d]">
-            No approved comments yet. Be the first to comment.
+            No comments yet. Be the first to comment.
           </p>
         )}
       </div>

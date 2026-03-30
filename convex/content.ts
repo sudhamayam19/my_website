@@ -401,7 +401,7 @@ export const addComment = mutationGeneric({
       message,
       createdAt: now,
       createdAtTs: Date.parse(now),
-      status: "pending",
+      status: "approved",
     });
 
     return {
@@ -410,7 +410,7 @@ export const addComment = mutationGeneric({
       author,
       message,
       createdAt: now,
-      status: "pending",
+      status: "approved",
     };
   },
 });

@@ -5,6 +5,20 @@ import { AdminScreen, Card, Pill } from "@/components/screen";
 import { useAuth } from "@/lib/auth";
 import { registerForCommentNotificationsAsync } from "@/lib/notifications";
 
+function getNotificationErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (message.includes("Default FirebaseApp is not initialized")) {
+    return "Phone alerts are not ready on this build yet. Email alerts still work fine.";
+  }
+
+  if (message.includes("Notification permission was not granted")) {
+    return "Notifications are turned off for this app on the phone.";
+  }
+
+  return message || "Unable to enable notifications right now.";
+}
+
 export default function ProfileScreen() {
   const { isAuthenticated, signInWithPassword, signOut } = useAuth();
   const [username, setUsername] = useState("");
@@ -39,7 +53,7 @@ export default function ProfileScreen() {
       await registerForCommentNotificationsAsync();
       setFeedback("Comment alerts are now enabled on this phone.");
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : "Unable to enable notifications.");
+      setFeedback(getNotificationErrorMessage(error));
     } finally {
       setNotificationsLoading(false);
     }
