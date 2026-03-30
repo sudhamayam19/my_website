@@ -17,6 +17,14 @@ export interface BlogStats {
   totalComments: number;
   categories: number;
   pendingComments: number;
+  totalViews: number;
+}
+
+export interface TopPost {
+  id: string;
+  title: string;
+  category: string;
+  views: number;
 }
 
 export interface PostInput {
@@ -217,6 +225,7 @@ export async function getAdminStats(): Promise<BlogStats> {
       totalComments: defaultBlogComments.length,
       categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
       pendingComments: defaultBlogComments.filter((comment) => comment.status === "pending").length,
+      totalViews: 0,
     };
   }
 
@@ -229,6 +238,7 @@ export async function getAdminStats(): Promise<BlogStats> {
       totalComments: defaultBlogComments.length,
       categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
       pendingComments: defaultBlogComments.filter((comment) => comment.status === "pending").length,
+      totalViews: 0,
     };
   }
 
@@ -242,7 +252,39 @@ export async function getAdminStats(): Promise<BlogStats> {
       totalComments: defaultBlogComments.length,
       categories: Array.from(new Set(allPosts.map((post) => post.category))).length,
       pendingComments: defaultBlogComments.filter((comment) => comment.status === "pending").length,
+      totalViews: 0,
     };
+  }
+}
+
+export async function getTopPostsByViews(limit = 5): Promise<TopPost[]> {
+  const client = getConvexClient();
+  if (!client) {
+    return [];
+  }
+
+  const isReady = await tryEnsureSeeded(client);
+  if (!isReady) {
+    return [];
+  }
+
+  try {
+    return await client.query(api.content.getTopPostsByViews, { limit });
+  } catch {
+    return [];
+  }
+}
+
+export async function incrementPostView(id: string): Promise<void> {
+  const client = getConvexClient();
+  if (!client) {
+    return;
+  }
+
+  try {
+    await client.mutation(api.content.incrementPostView, { id });
+  } catch {
+    // silently ignore view tracking errors
   }
 }
 

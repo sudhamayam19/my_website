@@ -15,6 +15,7 @@ export interface BlogPost {
   status: PostStatus;
   featured: boolean;
   seoDescription: string;
+  views?: number;
 }
 
 export interface BlogComment {
