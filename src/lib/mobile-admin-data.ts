@@ -3,7 +3,9 @@ import {
   getBlogPostById,
   getBlogPosts,
   getCommentsByPostId,
+  getTopPostsByViews,
   type BlogStats,
+  type TopPost,
 } from "@/lib/content-store";
 import type { BlogComment, BlogPost, CommentStatus } from "@/lib/site-data";
 
@@ -15,6 +17,7 @@ export interface MobileDashboardData {
   stats: BlogStats;
   recentPosts: BlogPost[];
   recentComments: AdminCommentFeedItem[];
+  topPosts: TopPost[];
 }
 
 const ADMIN_COMMENT_STATUSES: CommentStatus[] = ["pending", "approved", "hidden", "spam"];
@@ -40,16 +43,18 @@ export async function getRecentComments(limit = 20): Promise<AdminCommentFeedIte
 }
 
 export async function getMobileDashboardData(): Promise<MobileDashboardData> {
-  const [stats, posts, recentComments] = await Promise.all([
+  const [stats, posts, recentComments, topPosts] = await Promise.all([
     getAdminStats(),
     getBlogPosts({ includeDrafts: true }),
     getRecentComments(8),
+    getTopPostsByViews(5),
   ]);
 
   return {
     stats,
     recentPosts: posts.slice(0, 6),
     recentComments,
+    topPosts,
   };
 }
 

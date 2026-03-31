@@ -49,8 +49,30 @@ export default function HomeScreen() {
                   <Pill label="Pending" />
                   <Text style={styles.statValue}>{data.stats.pendingComments}</Text>
                 </View>
+                <View style={[styles.statTile, styles.statTileViews]}>
+                  <Pill label="Total Views" tone="teal" />
+                  <Text style={styles.statValue}>
+                    {(data.stats.totalViews ?? 0).toLocaleString()}
+                  </Text>
+                </View>
               </View>
             </Card>
+            {data.topPosts && data.topPosts.length > 0 && (
+              <Card title="Top posts by views">
+                <View style={styles.stack}>
+                  {data.topPosts.map((post, index) => (
+                    <View key={post.id} style={styles.item}>
+                      <Text style={styles.rank}>{index + 1}</Text>
+                      <View style={styles.copy}>
+                        <Text style={styles.itemTitle}>{post.title}</Text>
+                        <Text style={styles.itemMeta}>{post.category}</Text>
+                      </View>
+                      <Text style={styles.viewCount}>{post.views.toLocaleString()} views</Text>
+                    </View>
+                  ))}
+                </View>
+              </Card>
+            )}
             <Card title="Recent posts">
               <View style={styles.stack}>
                 {data.recentPosts.map((post) => (
@@ -129,6 +151,21 @@ const styles = StyleSheet.create({
   itemMeta: {
     color: "#61747d",
     fontSize: 13,
+  },
+  statTileViews: {
+    backgroundColor: "#e6f4f4",
+  },
+  rank: {
+    color: "#b89572",
+    fontWeight: "900",
+    fontSize: 16,
+    width: 20,
+    textAlign: "center",
+  },
+  viewCount: {
+    color: "#1f6973",
+    fontSize: 13,
+    fontWeight: "700",
   },
   comment: {
     backgroundColor: "#f7efe4",

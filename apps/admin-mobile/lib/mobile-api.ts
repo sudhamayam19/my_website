@@ -30,6 +30,13 @@ export interface MobileComment {
   status: MobileCommentStatus;
 }
 
+export interface MobileTopPost {
+  id: string;
+  title: string;
+  category: string;
+  views: number;
+}
+
 export interface MobileDashboardResponse {
   stats: {
     totalPosts: number;
@@ -37,9 +44,11 @@ export interface MobileDashboardResponse {
     totalComments: number;
     categories: number;
     pendingComments: number;
+    totalViews: number;
   };
   recentPosts: MobilePost[];
   recentComments: MobileComment[];
+  topPosts: MobileTopPost[];
 }
 
 function getApiBaseUrl(): string {
