@@ -155,7 +155,7 @@ export default function PostsScreen() {
 
   const sharePost = async (post: MobilePost) => {
     const url = `${PUBLIC_SITE_URL}/blog/${post.id}`;
-    await Share.share({ title: post.title, message: `${post.title}\n\n${url}`, url });
+    await Share.share({ title: post.title, message: url, url });
   };
 
   const pickCover = async () => {

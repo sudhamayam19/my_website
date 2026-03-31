@@ -16,12 +16,34 @@ const editorialBody = Alegreya_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://sudhamayam.vercel.app"),
   title: {
     default: "Sudha Devarakonda | RJ | Translator | Voice Artist",
     template: "%s | Sudha Devarakonda",
   },
   description:
     "Official website frontend for Sudha Devarakonda. Explore blog posts, media highlights, and admin-ready content management UI.",
+  openGraph: {
+    title: "Sudha Devarakonda | RJ | Translator | Voice Artist",
+    description:
+      "Official website frontend for Sudha Devarakonda. Explore blog posts, media highlights, and admin-ready content management UI.",
+    type: "website",
+    images: [
+      {
+        url: "/api/og",
+        width: 1200,
+        height: 630,
+        alt: "Sudha Devarakonda social preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sudha Devarakonda | RJ | Translator | Voice Artist",
+    description:
+      "Official website frontend for Sudha Devarakonda. Explore blog posts, media highlights, and admin-ready content management UI.",
+    images: ["/api/og"],
+  },
 };
 
 export default function RootLayout({

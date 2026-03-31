@@ -12,7 +12,7 @@ export function ShareButtons() {
   const shareLinks = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
     twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent("Check out this amazing post by Sudha Devarakonda!")}`,
-    whatsapp: `https://wa.me/?text=${encodeURIComponent(`Check out this amazing post: ${url}`)}`,
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(url)}`,
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
   };
 

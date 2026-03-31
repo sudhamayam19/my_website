@@ -30,6 +30,7 @@ export async function generateMetadata({
 }: BlogPostPageProps): Promise<Metadata> {
   const { id } = await params;
   const post = await getBlogPostById(id);
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sudhamayam.vercel.app").replace(/\/$/, "");
 
   if (!post) {
     return {
@@ -38,9 +39,38 @@ export async function generateMetadata({
     };
   }
 
+  const socialImageUrl =
+    post.coverImageUrl && /^https?:\/\//.test(post.coverImageUrl)
+      ? post.coverImageUrl
+      : `${siteUrl}/api/og?title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.category)}&excerpt=${encodeURIComponent(post.excerpt)}`;
+
   return {
     title: `${post.title} | Sudha Devarakonda`,
     description: post.seoDescription,
+    alternates: {
+      canonical: `${siteUrl}/blog/${post.id}`,
+    },
+    openGraph: {
+      title: post.title,
+      description: post.seoDescription,
+      type: "article",
+      url: `${siteUrl}/blog/${post.id}`,
+      siteName: "Sudha Devarakonda",
+      images: [
+        {
+          url: socialImageUrl,
+          width: 1200,
+          height: 630,
+          alt: post.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.seoDescription,
+      images: [socialImageUrl],
+    },
   };
 }
 
