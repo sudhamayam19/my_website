@@ -5,6 +5,7 @@ import { AdSenseAd } from "@/components/AdSenseAd";
 import { getBlogNav } from "@/components/AuthNav";
 import { CommentsSection } from "@/components/CommentsSection";
 import { PostViewTracker } from "@/components/PostViewTracker";
+import { PostLikeButton } from "@/components/PostLikeButton";
 import { RichTextRenderer } from "@/components/RichTextRenderer";
 import { ShareButtons } from "@/components/ShareButtons";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -137,6 +138,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
             <AdSenseAd adSlot="AUTO_AD_SLOT_1" className="my-8" />
 
+            <div className="mt-8">
+              <PostLikeButton postId={post.id} initialLikes={post.likes ?? 0} />
+            </div>
             <ShareButtons />
             <CommentsSection postId={post.id} initialComments={comments} />
           </section>

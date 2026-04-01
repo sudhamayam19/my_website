@@ -16,6 +16,7 @@ export interface BlogPost {
   featured: boolean;
   seoDescription: string;
   views?: number;
+  likes?: number;
 }
 
 export interface BlogComment {

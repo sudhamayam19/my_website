@@ -17,6 +17,7 @@ export default defineSchema({
     featured: v.boolean(),
     seoDescription: v.string(),
     views: v.optional(v.number()),
+    likes: v.optional(v.number()),
     createdAt: v.string(),
     updatedAt: v.string(),
   })

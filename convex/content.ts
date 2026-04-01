@@ -41,6 +41,7 @@ interface PostRecord {
   featured: boolean;
   seoDescription: string;
   views?: number;
+  likes?: number;
 }
 
 interface CommentRecord {
@@ -169,6 +170,7 @@ function mapPost(doc: PostRecord) {
     featured: doc.featured,
     seoDescription: doc.seoDescription,
     views: doc.views ?? 0,
+    likes: doc.likes ?? 0,
   };
 }
 
@@ -320,6 +322,22 @@ export const incrementPostView = mutationGeneric({
     await ctx.db.patch(args.id, {
       views: (post.views ?? 0) + 1,
     });
+  },
+});
+
+export const incrementPostLike = mutationGeneric({
+  args: {
+    id: v.id("posts"),
+  },
+  handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.id);
+    if (!post || post.status !== "published") {
+      return { likes: 0 };
+    }
+
+    const likes = (post.likes ?? 0) + 1;
+    await ctx.db.patch(args.id, { likes });
+    return { likes };
   },
 });
 

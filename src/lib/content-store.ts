@@ -288,6 +288,20 @@ export async function incrementPostView(id: string): Promise<void> {
   }
 }
 
+export async function incrementPostLike(id: string): Promise<number> {
+  const client = getConvexClient();
+  if (!client) {
+    return 0;
+  }
+
+  try {
+    const result = await client.mutation(api.content.incrementPostLike, { id });
+    return result.likes ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function createPost(input: PostInput): Promise<{ id: string }> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.createPost, { input });
