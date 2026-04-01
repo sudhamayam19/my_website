@@ -370,3 +370,13 @@ export async function addNewsletterSubscriber(email: string): Promise<{ alreadyS
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.addNewsletterSubscriber, { email });
 }
+
+export async function addAdminReply(input: {
+  postId: string;
+  parentId: string;
+  message: string;
+  adminName?: string;
+}): Promise<BlogComment> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.addAdminReply, input);
+}

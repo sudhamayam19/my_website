@@ -13,31 +13,52 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
   const [comments, setComments] = useState<BlogComment[]>(initialComments);
 
   const handleCommentAdded = (comment: BlogComment) => {
-    setComments((currentComments) => [comment, ...currentComments]);
+    setComments((current) => [comment, ...current]);
   };
+
+  const topLevel = comments.filter((c) => !c.parentId);
+  const replies = comments.filter((c) => !!c.parentId);
 
   return (
     <section className="mt-12 border-t border-[#d8c8b0] pt-10">
       <div className="mb-6 flex items-end justify-between gap-3">
         <h3 className="display-font text-3xl font-bold text-[#1f2d39]">
-          Comments ({comments.length})
+          Comments ({topLevel.length})
         </h3>
       </div>
 
       <div className="space-y-4">
-        {comments.length ? (
-          comments.map((comment) => (
-            <article
-              key={comment.id}
-              className="rounded-2xl border border-[#d7c6ae] bg-[#fdf8ef] p-5"
-            >
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <p className="font-semibold text-[#1e2f3c]">{comment.author}</p>
-                <p className="text-[#60717b]">{formatRelativeTime(comment.createdAt)}</p>
+        {topLevel.length ? (
+          topLevel.map((comment) => {
+            const commentReplies = replies.filter((r) => r.parentId === comment.id);
+            return (
+              <div key={comment.id}>
+                <article className="rounded-2xl border border-[#d7c6ae] bg-[#fdf8ef] p-5">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <p className="font-semibold text-[#1e2f3c]">{comment.author}</p>
+                    <p className="text-[#60717b]">{formatRelativeTime(comment.createdAt)}</p>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-[#445963]">{comment.message}</p>
+                </article>
+                {commentReplies.map((reply) => (
+                  <div key={reply.id} className="ml-6 mt-2">
+                    <article className="rounded-2xl border border-[#c1d9d8] bg-[#edf7f6] p-4">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <p className="font-semibold text-[#1f2d39]">{reply.author}</p>
+                        {reply.authorType === "admin" && (
+                          <span className="rounded-full bg-[#1f6973] px-2 py-0.5 text-xs font-bold text-white">
+                            Author
+                          </span>
+                        )}
+                        <p className="text-[#60717b]">{formatRelativeTime(reply.createdAt)}</p>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed text-[#445963]">{reply.message}</p>
+                    </article>
+                  </div>
+                ))}
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-[#445963]">{comment.message}</p>
-            </article>
-          ))
+            );
+          })
         ) : (
           <p className="rounded-xl border border-dashed border-[#c9b497] bg-[#fdf8ef] px-4 py-5 text-sm text-[#50616d]">
             No comments yet. Be the first to comment.

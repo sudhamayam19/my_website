@@ -28,6 +28,8 @@ export interface MobileComment {
   message: string;
   createdAt: string;
   status: MobileCommentStatus;
+  parentId?: string;
+  authorType?: "user" | "admin";
 }
 
 export interface MobileTopPost {
@@ -157,6 +159,18 @@ export async function updateCommentStatus(
       body: JSON.stringify({ status }),
     },
   );
+}
+
+export async function replyToComment(
+  commentId: string,
+  postId: string,
+  message: string,
+): Promise<MobileComment> {
+  const data = await apiRequest<{ reply: MobileComment }>(`/api/mobile/comments/${commentId}`, {
+    method: "POST",
+    body: JSON.stringify({ postId, message }),
+  });
+  return data.reply;
 }
 
 export async function registerPushToken(token: string, platform: string): Promise<void> {

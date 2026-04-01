@@ -52,6 +52,8 @@ interface CommentRecord {
   createdAt: string;
   createdAtTs: number;
   status?: "approved" | "pending" | "hidden" | "spam";
+  parentId?: string;
+  authorType?: "user" | "admin";
 }
 
 function slugify(value: string): string {
@@ -182,6 +184,8 @@ function mapComment(doc: CommentRecord) {
     message: doc.message,
     createdAt: doc.createdAt,
     status: doc.status ?? "approved",
+    parentId: doc.parentId ? String(doc.parentId) : undefined,
+    authorType: doc.authorType ?? "user",
   };
 }
 
@@ -471,6 +475,56 @@ export const addComment = mutationGeneric({
       message,
       createdAt: now,
       status: "approved",
+    };
+  },
+});
+
+export const addAdminReply = mutationGeneric({
+  args: {
+    postId: v.id("posts"),
+    parentId: v.id("comments"),
+    message: v.string(),
+    adminName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.postId);
+    if (!post || post.status !== "published") {
+      throw new Error("Post unavailable.");
+    }
+
+    const parent = await ctx.db.get(args.parentId);
+    if (!parent) {
+      throw new Error("Parent comment not found.");
+    }
+
+    const message = args.message.trim();
+    if (!message) {
+      throw new Error("Reply message is required.");
+    }
+
+    const author = (args.adminName ?? "Sudha").trim() || "Sudha";
+    const now = new Date().toISOString();
+
+    const id = await ctx.db.insert("comments", {
+      postId: args.postId,
+      author,
+      message,
+      createdAt: now,
+      createdAtTs: Date.parse(now),
+      status: "approved",
+      parentId: args.parentId,
+      authorType: "admin",
+    });
+
+    return {
+      id: String(id),
+      postId: String(args.postId),
+      parentId: String(args.parentId),
+      author,
+      message,
+      createdAt: now,
+      status: "approved",
+      authorType: "admin",
     };
   },
 });

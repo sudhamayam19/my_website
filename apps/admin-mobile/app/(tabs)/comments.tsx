@@ -10,12 +10,14 @@ import {
   TextInput,
   View,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { AuthGuard } from "@/components/auth-guard";
 import { AdminScreen, Card, Pill } from "@/components/screen";
 import {
   deleteComment,
   fetchComments,
+  replyToComment,
   type MobileComment,
   type MobileCommentStatus,
   updateCommentStatus,
@@ -54,6 +56,9 @@ export default function CommentsScreen() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [changingId, setChangingId] = useState<string | null>(null);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | MobileCommentStatus>("all");
   const [refreshing, setRefreshing] = useState(false);
@@ -156,6 +161,21 @@ export default function CommentsScreen() {
     }
   };
 
+  const handleReplySubmit = async (comment: MobileComment) => {
+    if (!replyText.trim()) return;
+    try {
+      setSubmittingReply(true);
+      const reply = await replyToComment(comment.id, comment.postId, replyText.trim());
+      setComments((current) => [...current, reply]);
+      setReplyText("");
+      setReplyingToId(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to post reply.");
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
   return (
     <AuthGuard>
       <AdminScreen
@@ -255,10 +275,50 @@ export default function CommentsScreen() {
                           <Text style={styles.secondaryActionText}>Spam</Text>
                         </Pressable>
                       ) : null}
+                      {!comment.parentId ? (
+                        <Pressable
+                          style={[styles.actionButton, styles.replyButton]}
+                          onPress={() => {
+                            setReplyingToId(replyingToId === comment.id ? null : comment.id);
+                            setReplyText("");
+                          }}
+                        >
+                          <Text style={styles.replyText}>Reply</Text>
+                        </Pressable>
+                      ) : null}
                       <Pressable style={styles.deleteButton} onPress={() => handleDelete(comment)}>
                         <Ionicons name="trash-outline" size={18} color="#9a4335" />
                       </Pressable>
                     </View>
+                    {replyingToId === comment.id ? (
+                      <View style={styles.replyBox}>
+                        <TextInput
+                          value={replyText}
+                          onChangeText={setReplyText}
+                          placeholder="Write your reply..."
+                          placeholderTextColor="#8a989c"
+                          multiline
+                          style={styles.replyInput}
+                        />
+                        <View style={styles.replyActions}>
+                          <Pressable
+                            style={[styles.actionButton, styles.approveButton]}
+                            onPress={() => void handleReplySubmit(comment)}
+                            disabled={submittingReply || !replyText.trim()}
+                          >
+                            <Text style={styles.approveText}>
+                              {submittingReply ? "Posting..." : "Post Reply"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.actionButton, styles.secondaryAction]}
+                            onPress={() => { setReplyingToId(null); setReplyText(""); }}
+                          >
+                            <Text style={styles.secondaryActionText}>Cancel</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : null}
                   </View>
                 );
               })}
@@ -412,5 +472,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#f7ddd7",
     alignItems: "center",
     justifyContent: "center",
+  },
+  replyButton: {
+    backgroundColor: "#d9ece8",
+  },
+  replyText: {
+    color: "#1f6973",
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  replyBox: {
+    marginTop: 8,
+    gap: 8,
+  },
+  replyInput: {
+    backgroundColor: "#f0fafa",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#b5cfd1",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#19313b",
+    fontSize: 14,
+    minHeight: 72,
+    textAlignVertical: "top",
+  },
+  replyActions: {
+    flexDirection: "row",
+    gap: 8,
   },
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminSessionControls } from "@/components/admin/AdminSessionControls";
 import { DeleteCommentButton } from "@/components/admin/DeleteCommentButton";
 import { DeletePostButton } from "@/components/admin/DeletePostButton";
+import { ReplyCommentButton } from "@/components/admin/ReplyCommentButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { requireAdmin } from "@/lib/admin-access";
@@ -191,7 +192,10 @@ export default async function AdminDashboardPage() {
                         </p>
                         <p className="text-sm leading-relaxed text-[#445963]">{comment.message}</p>
                       </div>
-                      <DeleteCommentButton commentId={comment.id} author={comment.author} />
+                      <div className="flex gap-2">
+                        <ReplyCommentButton commentId={comment.id} postId={comment.postId} />
+                        <DeleteCommentButton commentId={comment.id} author={comment.author} />
+                      </div>
                     </div>
                   </article>
                 ))

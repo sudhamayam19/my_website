@@ -39,6 +39,8 @@ export default defineSchema({
         v.literal("spam"),
       ),
     ),
+    parentId: v.optional(v.id("comments")),
+    authorType: v.optional(v.union(v.literal("user"), v.literal("admin"))),
   }).index("by_postId_createdAtTs", ["postId", "createdAtTs"]),
 
   adminDeviceTokens: defineTable({
