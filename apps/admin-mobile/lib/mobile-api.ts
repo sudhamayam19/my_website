@@ -30,6 +30,9 @@ export interface MobileComment {
   status: MobileCommentStatus;
   parentId?: string;
   authorType?: "user" | "admin";
+  adminReply?: string;
+  adminReplyAuthor?: string;
+  adminReplyAt?: string;
 }
 
 export interface MobileTopPost {

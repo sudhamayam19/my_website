@@ -31,6 +31,9 @@ export default defineSchema({
     message: v.string(),
     createdAt: v.string(),
     createdAtTs: v.number(),
+    adminReply: v.optional(v.string()),
+    adminReplyAuthor: v.optional(v.string()),
+    adminReplyAt: v.optional(v.string()),
     status: v.optional(
       v.union(
         v.literal("approved"),

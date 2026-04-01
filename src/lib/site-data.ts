@@ -28,6 +28,9 @@ export interface BlogComment {
   status: CommentStatus;
   parentId?: string;
   authorType?: "user" | "admin";
+  adminReply?: string;
+  adminReplyAuthor?: string;
+  adminReplyAt?: string;
 }
 
 export interface TimelineEvent {

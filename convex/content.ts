@@ -51,6 +51,9 @@ interface CommentRecord {
   message: string;
   createdAt: string;
   createdAtTs: number;
+  adminReply?: string;
+  adminReplyAuthor?: string;
+  adminReplyAt?: string;
   status?: "approved" | "pending" | "hidden" | "spam";
   parentId?: string;
   authorType?: "user" | "admin";
@@ -186,6 +189,9 @@ function mapComment(doc: CommentRecord) {
     status: doc.status ?? "approved",
     parentId: doc.parentId ? String(doc.parentId) : undefined,
     authorType: doc.authorType ?? "user",
+    adminReply: doc.adminReply,
+    adminReplyAuthor: doc.adminReplyAuthor,
+    adminReplyAt: doc.adminReplyAt,
   };
 }
 

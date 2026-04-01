@@ -46,7 +46,12 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: INVALID_COMMENT_ID_MESSAGE }, { status: 400 });
     }
 
-    const payload = (await request.json()) as { postId?: string; message?: string; adminName?: string };
+    const payload = (await request.json()) as {
+      postId?: string;
+      message?: string;
+      adminName?: string;
+    };
+
     if (!payload.postId || !payload.message?.trim()) {
       return NextResponse.json({ error: "postId and message are required." }, { status: 400 });
     }
