@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Pressable,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -54,17 +56,28 @@ export default function CommentsScreen() {
   const [changingId, setChangingId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | MobileCommentStatus>("all");
+  const [refreshing, setRefreshing] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadComments = () => {
+  const loadComments = (silent = false) => {
+    if (!silent) setLoading(true);
     fetchComments()
       .then(setComments)
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load comments."))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setRefreshing(false); });
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadComments(true);
   };
 
   useEffect(() => {
-    setLoading(true);
     loadComments();
+    intervalRef.current = setInterval(() => loadComments(true), 30000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   const filteredComments = useMemo(() => {
@@ -149,6 +162,9 @@ export default function CommentsScreen() {
         eyebrow="Comments"
         title="Latest replies"
         subtitle="Review, approve, hide, or mark comments as spam without leaving the phone."
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1f6973" />
+        }
       >
         <View style={styles.statsRow}>
           <View style={styles.statCard}>

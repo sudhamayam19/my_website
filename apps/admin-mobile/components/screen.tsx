@@ -1,4 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
+import React from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export function AdminScreen({
@@ -7,15 +8,21 @@ export function AdminScreen({
   subtitle,
   children,
   aside,
+  refreshControl,
 }: PropsWithChildren<{
   eyebrow: string;
   title: string;
   subtitle: string;
   aside?: ReactNode;
+  refreshControl?: ReactNode;
 }>) {
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl as React.ReactElement | undefined}
+      >
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>{eyebrow}</Text>
