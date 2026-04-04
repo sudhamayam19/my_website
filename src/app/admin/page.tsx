@@ -197,16 +197,6 @@ export default async function AdminDashboardPage() {
                           {comment.postTitle || "Blog post"}
                         </p>
                         <p className="text-sm leading-relaxed text-[#445963]">{comment.message}</p>
-                        {comment.adminReply ? (
-                          <div className="rounded-2xl border border-[#c9ddd9] bg-[#eef8f5] p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#1f6973]">
-                              {comment.adminReplyAuthor || "Sudha Devarakonda"} replied
-                            </p>
-                            <p className="mt-2 text-sm leading-relaxed text-[#38545d]">
-                              {comment.adminReply}
-                            </p>
-                          </div>
-                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <CommentActionButtons
