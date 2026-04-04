@@ -17,6 +17,8 @@ import { AdminScreen, Card, Pill } from "@/components/screen";
 import {
   deleteComment,
   fetchComments,
+  highlightComment,
+  pinComment,
   replyToComment,
   type MobileComment,
   type MobileCommentStatus,
@@ -161,6 +163,28 @@ export default function CommentsScreen() {
     }
   };
 
+  const handlePin = async (comment: MobileComment) => {
+    try {
+      await pinComment(comment.id, !comment.pinned);
+      setComments((current) =>
+        current.map((c) => (c.id === comment.id ? { ...c, pinned: !c.pinned } : c)),
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to pin comment.");
+    }
+  };
+
+  const handleHighlight = async (comment: MobileComment) => {
+    try {
+      await highlightComment(comment.id, !comment.highlighted);
+      setComments((current) =>
+        current.map((c) => (c.id === comment.id ? { ...c, highlighted: !c.highlighted } : c)),
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to highlight comment.");
+    }
+  };
+
   const handleReplySubmit = async (comment: MobileComment) => {
     if (!replyText.trim()) return;
     try {
@@ -245,9 +269,14 @@ export default function CommentsScreen() {
                         <Text style={styles.author}>{comment.author}</Text>
                         <Pill label={new Date(comment.createdAt).toLocaleDateString()} tone="teal" />
                         <Pill label={comment.status} tone={getStatusTone(comment.status)} />
+                        {comment.pinned ? <Pill label="📌 Pinned" tone="teal" /> : null}
+                        {comment.highlighted ? <Pill label="★ Featured" tone="neutral" /> : null}
                       </View>
                       {busy ? <ActivityIndicator size="small" color="#9a4335" /> : null}
                     </View>
+                    {(comment.likes ?? 0) > 0 ? (
+                      <Text style={styles.likesCount}>♥ {comment.likes} likes</Text>
+                    ) : null}
                     <Text style={styles.postTitle}>{comment.postTitle || "Blog post"}</Text>
                     <Text style={styles.message}>{comment.message}</Text>
                     <View style={styles.actionRow}>
@@ -276,15 +305,33 @@ export default function CommentsScreen() {
                         </Pressable>
                       ) : null}
                       {!comment.parentId ? (
-                        <Pressable
-                          style={[styles.actionButton, styles.replyButton]}
-                          onPress={() => {
-                            setReplyingToId(replyingToId === comment.id ? null : comment.id);
-                            setReplyText("");
-                          }}
-                        >
-                          <Text style={styles.replyText}>Reply</Text>
-                        </Pressable>
+                        <>
+                          <Pressable
+                            style={[styles.actionButton, comment.pinned ? styles.approveButton : styles.secondaryAction]}
+                            onPress={() => void handlePin(comment)}
+                          >
+                            <Text style={comment.pinned ? styles.approveText : styles.secondaryActionText}>
+                              {comment.pinned ? "📌 Pinned" : "Pin"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.actionButton, comment.highlighted ? styles.highlightButtonActive : styles.secondaryAction]}
+                            onPress={() => void handleHighlight(comment)}
+                          >
+                            <Text style={comment.highlighted ? styles.highlightTextActive : styles.secondaryActionText}>
+                              {comment.highlighted ? "★ Featured" : "Feature"}
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.actionButton, styles.replyButton]}
+                            onPress={() => {
+                              setReplyingToId(replyingToId === comment.id ? null : comment.id);
+                              setReplyText("");
+                            }}
+                          >
+                            <Text style={styles.replyText}>Reply</Text>
+                          </Pressable>
+                        </>
                       ) : null}
                       <Pressable style={styles.deleteButton} onPress={() => handleDelete(comment)}>
                         <Ionicons name="trash-outline" size={18} color="#9a4335" />
@@ -480,6 +527,22 @@ const styles = StyleSheet.create({
     color: "#1f6973",
     fontWeight: "800",
     fontSize: 12,
+  },
+  highlightButtonActive: {
+    backgroundColor: "#fffbec",
+    borderWidth: 1,
+    borderColor: "#c8a84b",
+  },
+  highlightTextActive: {
+    color: "#a07c1a",
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  likesCount: {
+    color: "#5f6f79",
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
   },
   replyBox: {
     marginTop: 8,

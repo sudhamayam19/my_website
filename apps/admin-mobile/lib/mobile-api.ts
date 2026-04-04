@@ -18,6 +18,8 @@ export interface MobilePost {
   status: "draft" | "published";
   featured: boolean;
   seoDescription: string;
+  views?: number;
+  likes?: number;
 }
 
 export interface MobileComment {
@@ -30,6 +32,9 @@ export interface MobileComment {
   status: MobileCommentStatus;
   parentId?: string;
   authorType?: "user" | "admin";
+  likes?: number;
+  pinned?: boolean;
+  highlighted?: boolean;
 }
 
 export interface MobileTopPost {
@@ -159,6 +164,20 @@ export async function updateCommentStatus(
       body: JSON.stringify({ status }),
     },
   );
+}
+
+export async function pinComment(id: string, pinned: boolean): Promise<void> {
+  await apiRequest<object>(`/api/admin/comments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ pinned }),
+  });
+}
+
+export async function highlightComment(id: string, highlighted: boolean): Promise<void> {
+  await apiRequest<object>(`/api/admin/comments/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ highlighted }),
+  });
 }
 
 export async function replyToComment(

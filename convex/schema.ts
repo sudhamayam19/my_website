@@ -41,6 +41,9 @@ export default defineSchema({
     ),
     parentId: v.optional(v.id("comments")),
     authorType: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+    likes: v.optional(v.number()),
+    pinned: v.optional(v.boolean()),
+    highlighted: v.optional(v.boolean()),
   }).index("by_postId_createdAtTs", ["postId", "createdAtTs"]),
 
   adminDeviceTokens: defineTable({

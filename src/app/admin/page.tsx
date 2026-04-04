@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminSessionControls } from "@/components/admin/AdminSessionControls";
+import { CommentActionButtons } from "@/components/admin/CommentActionButtons";
 import { DeleteCommentButton } from "@/components/admin/DeleteCommentButton";
 import { DeletePostButton } from "@/components/admin/DeletePostButton";
 import { ReplyCommentButton } from "@/components/admin/ReplyCommentButton";
@@ -192,7 +193,12 @@ export default async function AdminDashboardPage() {
                         </p>
                         <p className="text-sm leading-relaxed text-[#445963]">{comment.message}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <CommentActionButtons
+                          commentId={comment.id}
+                          pinned={comment.pinned ?? false}
+                          highlighted={comment.highlighted ?? false}
+                        />
                         <ReplyCommentButton commentId={comment.id} postId={comment.postId} />
                         <DeleteCommentButton commentId={comment.id} author={comment.author} />
                       </div>

@@ -285,6 +285,8 @@ export default function PostsScreen() {
                 <Pill label={post.category} />
                 <Pill label={post.status} tone={post.status === "published" ? "teal" : "neutral"} />
                 {post.featured ? <Pill label="Featured" tone="clay" /> : null}
+                {(post.views ?? 0) > 0 ? <Pill label={`${post.views} views`} tone="teal" /> : null}
+                {(post.likes ?? 0) > 0 ? <Pill label={`♥ ${post.likes}`} /> : null}
               </View>
               <View style={styles.row}>
                 <Pressable style={styles.secondaryButton} onPress={(event) => { event.stopPropagation(); void sharePost(post); }}><Text style={styles.secondaryText}>Share</Text></Pressable>

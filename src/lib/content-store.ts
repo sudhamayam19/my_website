@@ -371,6 +371,22 @@ export async function addNewsletterSubscriber(email: string): Promise<{ alreadyS
   return await client.mutation(api.content.addNewsletterSubscriber, { email });
 }
 
+export async function likeComment(id: string): Promise<number> {
+  const client = ensureConvexForWrites(getConvexClient());
+  const result = await client.mutation(api.content.likeComment, { id });
+  return result.likes ?? 0;
+}
+
+export async function pinComment(id: string, pinned: boolean): Promise<void> {
+  const client = ensureConvexForWrites(getConvexClient());
+  await client.mutation(api.content.pinComment, { id, pinned });
+}
+
+export async function highlightComment(id: string, highlighted: boolean): Promise<void> {
+  const client = ensureConvexForWrites(getConvexClient());
+  await client.mutation(api.content.highlightComment, { id, highlighted });
+}
+
 export async function addAdminReply(input: {
   postId: string;
   parentId: string;

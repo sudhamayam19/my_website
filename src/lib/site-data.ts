@@ -28,6 +28,9 @@ export interface BlogComment {
   status: CommentStatus;
   parentId?: string;
   authorType?: "user" | "admin";
+  likes?: number;
+  pinned?: boolean;
+  highlighted?: boolean;
 }
 
 export interface TimelineEvent {

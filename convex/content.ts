@@ -54,6 +54,9 @@ interface CommentRecord {
   status?: "approved" | "pending" | "hidden" | "spam";
   parentId?: string;
   authorType?: "user" | "admin";
+  likes?: number;
+  pinned?: boolean;
+  highlighted?: boolean;
 }
 
 function slugify(value: string): string {
@@ -186,6 +189,9 @@ function mapComment(doc: CommentRecord) {
     status: doc.status ?? "approved",
     parentId: doc.parentId ? String(doc.parentId) : undefined,
     authorType: doc.authorType ?? "user",
+    likes: doc.likes ?? 0,
+    pinned: doc.pinned ?? false,
+    highlighted: doc.highlighted ?? false,
   };
 }
 
@@ -526,6 +532,37 @@ export const addAdminReply = mutationGeneric({
       status: "approved",
       authorType: "admin",
     };
+  },
+});
+
+export const likeComment = mutationGeneric({
+  args: { id: v.id("comments") },
+  handler: async (ctx, args) => {
+    const comment = await ctx.db.get(args.id);
+    if (!comment) throw new Error("Comment not found.");
+    const likes = (comment.likes ?? 0) + 1;
+    await ctx.db.patch(args.id, { likes });
+    return { likes };
+  },
+});
+
+export const pinComment = mutationGeneric({
+  args: { id: v.id("comments"), pinned: v.boolean() },
+  handler: async (ctx, args) => {
+    const comment = await ctx.db.get(args.id);
+    if (!comment) throw new Error("Comment not found.");
+    await ctx.db.patch(args.id, { pinned: args.pinned });
+    return { id: String(args.id), pinned: args.pinned };
+  },
+});
+
+export const highlightComment = mutationGeneric({
+  args: { id: v.id("comments"), highlighted: v.boolean() },
+  handler: async (ctx, args) => {
+    const comment = await ctx.db.get(args.id);
+    if (!comment) throw new Error("Comment not found.");
+    await ctx.db.patch(args.id, { highlighted: args.highlighted });
+    return { id: String(args.id), highlighted: args.highlighted };
   },
 });
 
