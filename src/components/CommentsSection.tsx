@@ -18,19 +18,35 @@ interface CommentsSectionProps {
 export function CommentsSection({ postId, initialComments }: CommentsSectionProps) {
   const [comments, setComments] = useState<BlogComment[]>(initialComments);
   const [likingId, setLikingId] = useState<string | null>(null);
+  const [likedIds, setLikedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("sudha-liked-comments");
+      return new Set(stored ? (JSON.parse(stored) as string[]) : []);
+    } catch {
+      return new Set();
+    }
+  });
 
   const handleCommentAdded = (comment: BlogComment) => {
     setComments((current) => [comment, ...current]);
   };
 
   const handleLike = async (id: string) => {
-    if (likingId === id) return;
+    if (likingId === id || likedIds.has(id)) return;
     setLikingId(id);
     const likes = await likeCommentApi(id).catch(() => null);
     if (likes !== null) {
       setComments((current) =>
         current.map((c) => (c.id === id ? { ...c, likes } : c)),
       );
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        try {
+          localStorage.setItem("sudha-liked-comments", JSON.stringify([...next]));
+        } catch {}
+        return next;
+      });
     }
     setLikingId(null);
   };
@@ -77,10 +93,14 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
                   <button
                     type="button"
                     onClick={() => void handleLike(comment.id)}
-                    disabled={likingId === comment.id}
-                    className="mt-3 flex items-center gap-1 text-xs text-[#5f6f79] transition hover:text-[#2a6670] disabled:opacity-50"
+                    disabled={likingId === comment.id || likedIds.has(comment.id)}
+                    className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition disabled:cursor-not-allowed ${
+                      likedIds.has(comment.id)
+                        ? "border-[#d96b7d] bg-[#fdecef] text-[#b5475d]"
+                        : "border-[#d7c6ae] bg-white text-[#5f6f79] hover:border-[#b89572] hover:text-[#2a6670]"
+                    }`}
                   >
-                    ♥ {comment.likes ?? 0}
+                    ♥ {likedIds.has(comment.id) ? "Liked" : "Like"}{(comment.likes ?? 0) > 0 ? ` · ${comment.likes}` : ""}
                   </button>
                 </article>
 
