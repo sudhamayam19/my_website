@@ -4,13 +4,11 @@ import {
   Alert,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-
 import { Ionicons } from "@expo/vector-icons";
 import { AuthGuard } from "@/components/auth-guard";
 import { AdminScreen, Card, Pill } from "@/components/screen";
@@ -67,11 +65,19 @@ export default function CommentsScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadComments = (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      setLoading(true);
+    }
+
     fetchComments()
       .then(setComments)
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load comments."))
-      .finally(() => { setLoading(false); setRefreshing(false); });
+      .catch((reason) =>
+        setError(reason instanceof Error ? reason.message : "Unable to load comments."),
+      )
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
   };
 
   const onRefresh = () => {
@@ -82,8 +88,11 @@ export default function CommentsScreen() {
   useEffect(() => {
     loadComments();
     intervalRef.current = setInterval(() => loadComments(true), 30000);
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
   }, []);
 
@@ -120,28 +129,24 @@ export default function CommentsScreen() {
       return;
     }
 
-    Alert.alert(
-      "Delete comment",
-      `Delete ${comment.author}'s comment?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setDeletingId(comment.id);
-              await deleteComment(comment.id);
-              setComments((current) => current.filter((item) => item.id !== comment.id));
-            } catch (reason) {
-              setError(reason instanceof Error ? reason.message : "Unable to delete comment.");
-            } finally {
-              setDeletingId(null);
-            }
-          },
+    Alert.alert("Delete comment", `Delete ${comment.author}'s comment?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setDeletingId(comment.id);
+            await deleteComment(comment.id);
+            setComments((current) => current.filter((item) => item.id !== comment.id));
+          } catch (reason) {
+            setError(reason instanceof Error ? reason.message : "Unable to delete comment.");
+          } finally {
+            setDeletingId(null);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleStatusChange = async (comment: MobileComment, nextStatus: MobileCommentStatus) => {
@@ -186,7 +191,10 @@ export default function CommentsScreen() {
   };
 
   const handleReplySubmit = async (comment: MobileComment) => {
-    if (!replyText.trim()) return;
+    if (!replyText.trim()) {
+      return;
+    }
+
     try {
       setSubmittingReply(true);
       const reply = await replyToComment(comment.id, comment.postId, replyText.trim());
@@ -359,7 +367,10 @@ export default function CommentsScreen() {
                           </Pressable>
                           <Pressable
                             style={[styles.actionButton, styles.secondaryAction]}
-                            onPress={() => { setReplyingToId(null); setReplyText(""); }}
+                            onPress={() => {
+                              setReplyingToId(null);
+                              setReplyText("");
+                            }}
                           >
                             <Text style={styles.secondaryActionText}>Cancel</Text>
                           </Pressable>

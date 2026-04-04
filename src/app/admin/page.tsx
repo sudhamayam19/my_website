@@ -186,12 +186,27 @@ export default async function AdminDashboardPage() {
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                           <p className="font-semibold text-[#1e2f3c]">{comment.author}</p>
+                          {comment.authorType === "admin" ? (
+                            <span className="rounded-full bg-[#1f6973] px-2 py-0.5 text-xs font-bold text-white">
+                              Author
+                            </span>
+                          ) : null}
                           <p className="text-[#60717b]">{formatDisplayDate(comment.createdAt)}</p>
                         </div>
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#1f6973]">
                           {comment.postTitle || "Blog post"}
                         </p>
                         <p className="text-sm leading-relaxed text-[#445963]">{comment.message}</p>
+                        {comment.adminReply ? (
+                          <div className="rounded-2xl border border-[#c9ddd9] bg-[#eef8f5] p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#1f6973]">
+                              {comment.adminReplyAuthor || "Sudha Devarakonda"} replied
+                            </p>
+                            <p className="mt-2 text-sm leading-relaxed text-[#38545d]">
+                              {comment.adminReply}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <CommentActionButtons

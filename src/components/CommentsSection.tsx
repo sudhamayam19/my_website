@@ -51,7 +51,7 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
       <div className="space-y-4">
         {topLevel.length ? (
           topLevel.map((comment) => {
-            const commentReplies = replies.filter((r) => r.parentId === comment.id);
+            const commentReplies = replies.filter((reply) => reply.parentId === comment.id);
             return (
               <div key={comment.id}>
                 <article
@@ -83,16 +83,17 @@ export function CommentsSection({ postId, initialComments }: CommentsSectionProp
                     ♥ {comment.likes ?? 0}
                   </button>
                 </article>
+
                 {commentReplies.map((reply) => (
                   <div key={reply.id} className="ml-6 mt-2">
                     <article className="rounded-2xl border border-[#c1d9d8] bg-[#edf7f6] p-4">
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                         <p className="font-semibold text-[#1f2d39]">{reply.author}</p>
-                        {reply.authorType === "admin" && (
+                        {reply.authorType === "admin" ? (
                           <span className="rounded-full bg-[#1f6973] px-2 py-0.5 text-xs font-bold text-white">
                             Author
                           </span>
-                        )}
+                        ) : null}
                         <p className="text-[#60717b]">{formatRelativeTime(reply.createdAt)}</p>
                       </div>
                       <p className="mt-2 text-sm leading-relaxed text-[#445963]">{reply.message}</p>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface ReplyCommentButtonProps {
   commentId: string;
@@ -19,6 +19,7 @@ export function ReplyCommentButton({ commentId, postId }: ReplyCommentButtonProp
     if (!message.trim()) return;
     setSubmitting(true);
     setError("");
+
     try {
       const response = await fetch(`/api/admin/comments/${commentId}/reply`, {
         method: "POST",
@@ -26,7 +27,10 @@ export function ReplyCommentButton({ commentId, postId }: ReplyCommentButtonProp
         body: JSON.stringify({ postId, message }),
       });
       const data = (await response.json()) as { error?: string };
-      if (!response.ok) throw new Error(data.error || "Unable to post reply.");
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to post reply.");
+      }
+
       setMessage("");
       setOpen(false);
       router.refresh();
@@ -58,7 +62,7 @@ export function ReplyCommentButton({ commentId, postId }: ReplyCommentButtonProp
         rows={3}
         className="w-full rounded-xl border border-[#c8dfe0] bg-[#f4fbfb] px-3 py-2 text-sm text-[#1e2f3b] placeholder-[#8a9da4] focus:outline-none focus:ring-2 focus:ring-[#2a6670]"
       />
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
       <div className="flex gap-2">
         <button
           type="button"
@@ -70,7 +74,11 @@ export function ReplyCommentButton({ commentId, postId }: ReplyCommentButtonProp
         </button>
         <button
           type="button"
-          onClick={() => { setOpen(false); setMessage(""); setError(""); }}
+          onClick={() => {
+            setOpen(false);
+            setMessage("");
+            setError("");
+          }}
           className="rounded-full border border-[#c7b294] px-4 py-1.5 text-xs font-semibold text-[#4f5f69] transition hover:bg-[#f6efe3]"
         >
           Cancel

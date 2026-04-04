@@ -51,6 +51,9 @@ interface CommentRecord {
   message: string;
   createdAt: string;
   createdAtTs: number;
+  adminReply?: string;
+  adminReplyAuthor?: string;
+  adminReplyAt?: string;
   status?: "approved" | "pending" | "hidden" | "spam";
   parentId?: string;
   authorType?: "user" | "admin";
