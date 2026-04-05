@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getBlogNav } from "@/components/AuthNav";
 import { BlogSearch } from "@/components/BlogSearch";
 import { NewsletterForm } from "@/components/NewsletterForm";

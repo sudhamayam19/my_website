@@ -2,6 +2,7 @@ import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 
 const postStatusValidator = v.union(v.literal("published"), v.literal("draft"));
+const podcastStatusValidator = v.union(v.literal("published"), v.literal("draft"));
 const commentStatusValidator = v.union(
   v.literal("approved"),
   v.literal("pending"),
@@ -25,6 +26,22 @@ const postInputValidator = v.object({
   seoDescription: v.string(),
 });
 
+const podcastInputValidator = v.object({
+  id: v.optional(v.string()),
+  slug: v.optional(v.string()),
+  title: v.string(),
+  excerpt: v.string(),
+  description: v.string(),
+  showTitle: v.string(),
+  publishedAt: v.string(),
+  durationMinutes: v.number(),
+  audioUrl: v.string(),
+  coverImageUrl: v.optional(v.string()),
+  status: podcastStatusValidator,
+  featured: v.boolean(),
+  seoDescription: v.string(),
+});
+
 interface PostRecord {
   _id: string;
   slug: string;
@@ -42,6 +59,24 @@ interface PostRecord {
   seoDescription: string;
   views?: number;
   likes?: number;
+}
+
+interface PodcastEpisodeRecord {
+  _id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  description: string;
+  showTitle: string;
+  publishedAt: string;
+  publishedAtTs: number;
+  durationMinutes: number;
+  audioUrl: string;
+  coverImageUrl?: string;
+  status: "published" | "draft";
+  featured: boolean;
+  seoDescription: string;
+  listens?: number;
 }
 
 interface CommentRecord {
@@ -132,6 +167,52 @@ function normalizePostInput(input: {
   };
 }
 
+function normalizePodcastInput(input: {
+  slug?: string;
+  title: string;
+  excerpt: string;
+  description: string;
+  showTitle: string;
+  publishedAt: string;
+  durationMinutes: number;
+  audioUrl: string;
+  coverImageUrl?: string;
+  status: "published" | "draft";
+  featured: boolean;
+  seoDescription: string;
+}) {
+  const title = input.title.trim();
+  const excerpt = input.excerpt.trim();
+  const description = input.description.trim();
+  const showTitle = input.showTitle.trim() || "Sudha Devarakonda Podcast";
+  const audioUrl = input.audioUrl.trim();
+  const seoDescription = input.seoDescription.trim() || excerpt;
+  const slug = slugify(input.slug?.trim() || title);
+  const durationMinutes = Math.max(1, Math.min(600, Math.round(input.durationMinutes)));
+  const coverImageUrl = input.coverImageUrl?.trim();
+  const { publishedAt, publishedAtTs } = normalizePublishedAt(input.publishedAt);
+
+  if (!title || !excerpt || !description || !audioUrl) {
+    throw new Error("Required podcast fields are missing.");
+  }
+
+  return {
+    slug,
+    title,
+    excerpt,
+    description,
+    showTitle,
+    publishedAt,
+    publishedAtTs,
+    durationMinutes,
+    audioUrl,
+    coverImageUrl: coverImageUrl && coverImageUrl.length > 0 ? coverImageUrl : undefined,
+    status: input.status,
+    featured: input.featured,
+    seoDescription,
+  };
+}
+
 async function buildUniqueSlug(db: unknown, requested: string, currentId?: string) {
   const database = db as {
     query(table: "posts"): {
@@ -162,6 +243,36 @@ async function buildUniqueSlug(db: unknown, requested: string, currentId?: strin
   }
 }
 
+async function buildUniquePodcastSlug(db: unknown, requested: string, currentId?: string) {
+  const database = db as {
+    query(table: "podcastEpisodes"): {
+      withIndex(
+        index: "by_slug",
+        builder: (query: { eq(field: "slug", value: string): unknown }) => unknown,
+      ): {
+        first(): Promise<PodcastEpisodeRecord | null>;
+      };
+    };
+  };
+
+  let candidate = requested;
+  let suffix = 2;
+
+  for (;;) {
+    const existing = await database
+      .query("podcastEpisodes")
+      .withIndex("by_slug", (query) => query.eq("slug", candidate))
+      .first();
+
+    if (!existing || existing._id === currentId) {
+      return candidate;
+    }
+
+    candidate = `${requested}-${suffix}`;
+    suffix += 1;
+  }
+}
+
 function mapPost(doc: PostRecord) {
   return {
     id: String(doc._id),
@@ -179,6 +290,25 @@ function mapPost(doc: PostRecord) {
     seoDescription: doc.seoDescription,
     views: doc.views ?? 0,
     likes: doc.likes ?? 0,
+  };
+}
+
+function mapPodcastEpisode(doc: PodcastEpisodeRecord) {
+  return {
+    id: String(doc._id),
+    slug: doc.slug,
+    title: doc.title,
+    excerpt: doc.excerpt,
+    description: doc.description,
+    showTitle: doc.showTitle,
+    publishedAt: doc.publishedAt,
+    durationMinutes: doc.durationMinutes,
+    audioUrl: doc.audioUrl,
+    coverImageUrl: doc.coverImageUrl,
+    status: doc.status,
+    featured: doc.featured,
+    seoDescription: doc.seoDescription,
+    listens: doc.listens ?? 0,
   };
 }
 
@@ -243,6 +373,56 @@ export const getPostById = queryGeneric({
   handler: async (ctx, args) => {
     const post = await ctx.db.get(args.id);
     return post ? mapPost(post) : null;
+  },
+});
+
+export const listPodcastEpisodes = queryGeneric({
+  args: {
+    includeDrafts: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const includeDrafts = args.includeDrafts ?? false;
+    const docs = includeDrafts
+      ? await ctx.db.query("podcastEpisodes").collect()
+      : await ctx.db
+          .query("podcastEpisodes")
+          .withIndex("by_status_publishedAtTs", (query) =>
+            query.eq("status", "published"),
+          )
+          .collect();
+
+    return docs
+      .sort((a, b) => b.publishedAtTs - a.publishedAtTs)
+      .map(mapPodcastEpisode);
+  },
+});
+
+export const listFeaturedPodcastEpisodes = queryGeneric({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.max(1, Math.min(12, args.limit ?? 3));
+    const docs = await ctx.db
+      .query("podcastEpisodes")
+      .withIndex("by_featured_publishedAtTs", (query) => query.eq("featured", true))
+      .collect();
+
+    return docs
+      .filter((doc) => doc.status === "published")
+      .sort((a, b) => b.publishedAtTs - a.publishedAtTs)
+      .slice(0, limit)
+      .map(mapPodcastEpisode);
+  },
+});
+
+export const getPodcastEpisodeById = queryGeneric({
+  args: {
+    id: v.id("podcastEpisodes"),
+  },
+  handler: async (ctx, args) => {
+    const episode = await ctx.db.get(args.id);
+    return episode ? mapPodcastEpisode(episode) : null;
   },
 });
 
@@ -354,6 +534,22 @@ export const incrementPostLike = mutationGeneric({
   },
 });
 
+export const incrementPodcastListen = mutationGeneric({
+  args: {
+    id: v.id("podcastEpisodes"),
+  },
+  handler: async (ctx, args) => {
+    const episode = await ctx.db.get(args.id);
+    if (!episode || episode.status !== "published") {
+      return { listens: 0 };
+    }
+
+    const listens = (episode.listens ?? 0) + 1;
+    await ctx.db.patch(args.id, { listens });
+    return { listens };
+  },
+});
+
 export const listAdminDeviceTokens = queryGeneric({
   args: {},
   handler: async (ctx) => {
@@ -401,6 +597,26 @@ export const createPost = mutationGeneric({
   },
 });
 
+export const createPodcastEpisode = mutationGeneric({
+  args: {
+    input: podcastInputValidator,
+  },
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    const normalized = normalizePodcastInput(args.input);
+    const slug = await buildUniquePodcastSlug(ctx.db, normalized.slug);
+
+    const id = await ctx.db.insert("podcastEpisodes", {
+      ...normalized,
+      slug,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { id: String(id) };
+  },
+});
+
 export const updatePost = mutationGeneric({
   args: {
     id: v.id("posts"),
@@ -414,6 +630,30 @@ export const updatePost = mutationGeneric({
 
     const normalized = normalizePostInput(args.input);
     const slug = await buildUniqueSlug(ctx.db, normalized.slug, args.id);
+
+    await ctx.db.patch(args.id, {
+      ...normalized,
+      slug,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return { id: String(args.id) };
+  },
+});
+
+export const updatePodcastEpisode = mutationGeneric({
+  args: {
+    id: v.id("podcastEpisodes"),
+    input: podcastInputValidator,
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) {
+      throw new Error("Podcast episode not found.");
+    }
+
+    const normalized = normalizePodcastInput(args.input);
+    const slug = await buildUniquePodcastSlug(ctx.db, normalized.slug, args.id);
 
     await ctx.db.patch(args.id, {
       ...normalized,
@@ -446,6 +686,21 @@ export const deletePost = mutationGeneric({
 
     await ctx.db.delete(args.id);
     return { id: String(args.id), deletedComments: relatedComments.length };
+  },
+});
+
+export const deletePodcastEpisode = mutationGeneric({
+  args: {
+    id: v.id("podcastEpisodes"),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.id);
+    if (!existing) {
+      throw new Error("Podcast episode not found.");
+    }
+
+    await ctx.db.delete(args.id);
+    return { id: String(args.id) };
   },
 });
 

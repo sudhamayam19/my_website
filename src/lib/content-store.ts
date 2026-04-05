@@ -3,9 +3,12 @@ import { anyApi } from "convex/server";
 import {
   defaultBlogComments,
   defaultBlogPosts,
+  defaultPodcastEpisodes,
   type BlogComment,
   type BlogPost,
   type CommentStatus,
+  type PodcastEpisode,
+  type PodcastStatus,
   type PostStatus,
 } from "@/lib/site-data";
 
@@ -41,6 +44,20 @@ export interface PostInput {
   seoDescription: string;
 }
 
+export interface PodcastEpisodeInput {
+  title: string;
+  excerpt: string;
+  description: string;
+  showTitle: string;
+  publishedAt: string;
+  durationMinutes: number;
+  audioUrl: string;
+  coverImageUrl?: string;
+  status: PodcastStatus;
+  featured: boolean;
+  seoDescription: string;
+}
+
 let seedPromise: Promise<void> | null = null;
 
 function getConvexClient() {
@@ -70,6 +87,20 @@ function getFallbackComments(postId: string): BlogComment[] {
   return [...defaultBlogComments]
     .filter((comment) => comment.postId === postId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+function sortPodcastEpisodes(data: PodcastEpisode[]): PodcastEpisode[] {
+  return [...data].sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+  );
+}
+
+function getFallbackPodcastEpisodes(options?: { includeDrafts?: boolean }): PodcastEpisode[] {
+  const includeDrafts = options?.includeDrafts ?? false;
+  const list = includeDrafts
+    ? defaultPodcastEpisodes
+    : defaultPodcastEpisodes.filter((episode) => episode.status === "published");
+  return sortPodcastEpisodes(list);
 }
 
 function ensureConvexForWrites(client: ConvexHttpClient | null): ConvexHttpClient {
@@ -149,6 +180,46 @@ export async function getFeaturedPosts(limit = 3): Promise<BlogPost[]> {
   }
 }
 
+export async function getPodcastEpisodes(options?: {
+  includeDrafts?: boolean;
+}): Promise<PodcastEpisode[]> {
+  const client = getConvexClient();
+  if (!client) {
+    return getFallbackPodcastEpisodes(options);
+  }
+
+  const isReady = await tryEnsureSeeded(client);
+  if (!isReady) {
+    return getFallbackPodcastEpisodes(options);
+  }
+
+  try {
+    return await client.query(api.content.listPodcastEpisodes, {
+      includeDrafts: options?.includeDrafts ?? false,
+    });
+  } catch {
+    return getFallbackPodcastEpisodes(options);
+  }
+}
+
+export async function getFeaturedPodcastEpisodes(limit = 3): Promise<PodcastEpisode[]> {
+  const client = getConvexClient();
+  if (!client) {
+    return getFallbackPodcastEpisodes().filter((episode) => episode.featured).slice(0, limit);
+  }
+
+  const isReady = await tryEnsureSeeded(client);
+  if (!isReady) {
+    return getFallbackPodcastEpisodes().filter((episode) => episode.featured).slice(0, limit);
+  }
+
+  try {
+    return await client.query(api.content.listFeaturedPodcastEpisodes, { limit });
+  } catch {
+    return getFallbackPodcastEpisodes().filter((episode) => episode.featured).slice(0, limit);
+  }
+}
+
 export async function getBlogPostById(id: string): Promise<BlogPost | undefined> {
   const client = getConvexClient();
   if (!client) {
@@ -165,6 +236,25 @@ export async function getBlogPostById(id: string): Promise<BlogPost | undefined>
     return post ?? undefined;
   } catch {
     return defaultBlogPosts.find((post) => post.id === id);
+  }
+}
+
+export async function getPodcastEpisodeById(id: string): Promise<PodcastEpisode | undefined> {
+  const client = getConvexClient();
+  if (!client) {
+    return defaultPodcastEpisodes.find((episode) => episode.id === id);
+  }
+
+  const isReady = await tryEnsureSeeded(client);
+  if (!isReady) {
+    return defaultPodcastEpisodes.find((episode) => episode.id === id);
+  }
+
+  try {
+    const episode = await client.query(api.content.getPodcastEpisodeById, { id });
+    return episode ?? undefined;
+  } catch {
+    return defaultPodcastEpisodes.find((episode) => episode.id === id);
   }
 }
 
@@ -302,9 +392,30 @@ export async function incrementPostLike(id: string): Promise<number> {
   }
 }
 
+export async function incrementPodcastListen(id: string): Promise<number> {
+  const client = getConvexClient();
+  if (!client) {
+    return 0;
+  }
+
+  try {
+    const result = await client.mutation(api.content.incrementPodcastListen, { id });
+    return result.listens ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
 export async function createPost(input: PostInput): Promise<{ id: string }> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.createPost, { input });
+}
+
+export async function createPodcastEpisode(
+  input: PodcastEpisodeInput,
+): Promise<{ id: string }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.createPodcastEpisode, { input });
 }
 
 export async function updatePost(id: string, input: PostInput): Promise<{ id: string }> {
@@ -312,9 +423,22 @@ export async function updatePost(id: string, input: PostInput): Promise<{ id: st
   return await client.mutation(api.content.updatePost, { id, input });
 }
 
+export async function updatePodcastEpisode(
+  id: string,
+  input: PodcastEpisodeInput,
+): Promise<{ id: string }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.updatePodcastEpisode, { id, input });
+}
+
 export async function deletePost(id: string): Promise<{ id: string; deletedComments: number }> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.deletePost, { id });
+}
+
+export async function deletePodcastEpisode(id: string): Promise<{ id: string }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.deletePodcastEpisode, { id });
 }
 
 export async function deleteComment(id: string): Promise<{ id: string; postId: string }> {

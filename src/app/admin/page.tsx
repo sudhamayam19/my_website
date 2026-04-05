@@ -2,26 +2,34 @@ import Link from "next/link";
 import { AdminSessionControls } from "@/components/admin/AdminSessionControls";
 import { CommentActionButtons } from "@/components/admin/CommentActionButtons";
 import { DeleteCommentButton } from "@/components/admin/DeleteCommentButton";
+import { DeletePodcastButton } from "@/components/admin/DeletePodcastButton";
 import { DeletePostButton } from "@/components/admin/DeletePostButton";
 import { ReplyCommentButton } from "@/components/admin/ReplyCommentButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { requireAdmin } from "@/lib/admin-access";
-import { getAdminStats, getBlogPosts, getTopPostsByViews } from "@/lib/content-store";
+import {
+  getAdminStats,
+  getBlogPosts,
+  getPodcastEpisodes,
+  getTopPostsByViews,
+} from "@/lib/content-store";
 import { getRecentComments } from "@/lib/mobile-admin-data";
 import { formatDisplayDate } from "@/lib/site-data";
 
 const adminNav = [
   { label: "Home", href: "/" },
   { label: "Blog", href: "/blog" },
+  { label: "Podcasts", href: "/podcasts" },
   { label: "Admin", href: "/admin" },
 ];
 
 export default async function AdminDashboardPage() {
   await requireAdmin("/admin");
   const stats = await getAdminStats();
-  const [posts, comments, topPosts] = await Promise.all([
+  const [posts, episodes, comments, topPosts] = await Promise.all([
     getBlogPosts({ includeDrafts: true }),
+    getPodcastEpisodes({ includeDrafts: true }),
     getRecentComments(12),
     getTopPostsByViews(5),
   ]);
@@ -161,6 +169,71 @@ export default async function AdminDashboardPage() {
                             Edit
                           </Link>
                           <DeletePostButton postId={post.id} postTitle={post.title} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="editorial-card mt-8 p-6 sm:p-8">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="display-font text-4xl font-bold text-[#1f2d39]">Podcast Episodes</h2>
+              <Link href="/admin/podcasts/new" className="editorial-btn-primary">
+                Create Episode
+              </Link>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-[#d8c8b0] text-[#61727d]">
+                    <th className="pb-3 font-semibold">Title</th>
+                    <th className="pb-3 font-semibold">Show</th>
+                    <th className="pb-3 font-semibold">Date</th>
+                    <th className="pb-3 font-semibold">Duration</th>
+                    <th className="pb-3 font-semibold">Status</th>
+                    <th className="pb-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {episodes.map((episode) => (
+                    <tr key={episode.id} className="border-b border-[#eadfcd]">
+                      <td className="py-4 font-medium text-[#1e2f3b]">{episode.title}</td>
+                      <td className="py-4 text-[#4e5f69]">{episode.showTitle}</td>
+                      <td className="py-4 text-[#4e5f69]">{formatDisplayDate(episode.publishedAt)}</td>
+                      <td className="py-4 text-[#4e5f69]">{episode.durationMinutes} min</td>
+                      <td className="py-4">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                            episode.status === "published"
+                              ? "bg-[#dceee7] text-[#1f6667]"
+                              : "bg-[#f2e6cf] text-[#8d6330]"
+                          }`}
+                        >
+                          {episode.status}
+                        </span>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/podcasts/${episode.id}`}
+                            className="rounded-full border border-[#c7b294] px-3 py-1 text-xs font-semibold text-[#2f3f4e] transition hover:bg-[#f6efe3]"
+                          >
+                            View
+                          </Link>
+                          <Link
+                            href={`/admin/podcasts/${episode.id}/edit`}
+                            className="rounded-full border border-[#b98d67] px-3 py-1 text-xs font-semibold text-[#2a6670] transition hover:bg-[#f6efe3]"
+                          >
+                            Edit
+                          </Link>
+                          <DeletePodcastButton
+                            episodeId={episode.id}
+                            episodeTitle={episode.title}
+                          />
                         </div>
                       </td>
                     </tr>

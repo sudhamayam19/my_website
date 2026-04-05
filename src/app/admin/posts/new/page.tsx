@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin-access";
 const adminNav = [
   { label: "Home", href: "/" },
   { label: "Blog", href: "/blog" },
+  { label: "Podcasts", href: "/podcasts" },
   { label: "Admin", href: "/admin" },
 ];
 

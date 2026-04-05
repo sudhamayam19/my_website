@@ -5,17 +5,21 @@ import { PlatformIcon } from "@/components/PlatformIcon";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TimelineMilestoneCard } from "@/components/TimelineMilestoneCard";
-import { getFeaturedPosts } from "@/lib/content-store";
+import { getFeaturedPodcastEpisodes, getFeaturedPosts } from "@/lib/content-store";
 import { isAdminAuthenticated } from "@/lib/simple-auth";
 import {
   formatDisplayDate,
+  formatDurationMinutes,
   mediaCards,
   timelineEvents,
 } from "@/lib/site-data";
 
 export default async function HomePage() {
   const homeNav = await getHomeNav({ includeJourney: true, includeMedia: true, includeBlog: true });
-  const featuredPosts = await getFeaturedPosts(3);
+  const [featuredPosts, featuredEpisodes] = await Promise.all([
+    getFeaturedPosts(3),
+    getFeaturedPodcastEpisodes(3),
+  ]);
   const showAdminAccess = await isAdminAuthenticated();
 
   return (
@@ -37,6 +41,9 @@ export default async function HomePage() {
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="/blog" className="editorial-btn-primary">
                   Read the blog
+                </Link>
+                <Link href="/podcasts" className="editorial-btn-secondary">
+                  Listen to podcasts
                 </Link>
                 {showAdminAccess ? (
                   <Link href="/admin" className="editorial-btn-secondary">
@@ -131,6 +138,69 @@ export default async function HomePage() {
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-10 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#2a6670]">
+                  Featured Listening
+                </p>
+                <h2 className="display-font mt-2 text-4xl font-bold text-[#1f2d39] sm:text-5xl">
+                  Latest podcast episodes
+                </h2>
+              </div>
+              <Link href="/podcasts" className="editorial-btn-secondary">
+                View all episodes
+              </Link>
+            </div>
+
+            {featuredEpisodes.length ? (
+              <div className="grid gap-6 md:grid-cols-3">
+                {featuredEpisodes.map((episode) => (
+                  <Link key={episode.id} href={`/podcasts/${episode.id}`} className="group block">
+                    <article className="editorial-card overflow-hidden transition group-hover:-translate-y-1">
+                      <div
+                        className={`h-44 ${
+                          episode.coverImageUrl ? "" : "bg-gradient-to-br from-[#2f6c76] via-[#3e8c89] to-[#d89a55]"
+                        }`}
+                        style={
+                          episode.coverImageUrl
+                            ? {
+                                backgroundImage: `url(${episode.coverImageUrl})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                              }
+                            : undefined
+                        }
+                      />
+                      <div className="p-6">
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                          <span className="editorial-chip">
+                            {formatDurationMinutes(episode.durationMinutes)}
+                          </span>
+                          <span className="text-[#5f6f79]">
+                            {formatDisplayDate(episode.publishedAt)}
+                          </span>
+                        </div>
+                        <h3 className="display-font mt-4 text-3xl font-bold text-[#1f2d39]">
+                          {episode.title}
+                        </h3>
+                        <p className="mt-3 text-sm leading-relaxed text-[#4f5f69]">
+                          {episode.excerpt}
+                        </p>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-[#c8b397] bg-[#fff9ef] px-6 py-8 text-[#50616d]">
+                Podcast episodes will appear here after the first upload.
+              </p>
+            )}
           </div>
         </section>
 

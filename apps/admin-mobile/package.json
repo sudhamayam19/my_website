@@ -12,9 +12,10 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "expo": "~54.0.10",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",
-    "expo": "~54.0.10",
+    "expo-document-picker": "^55.0.11",
     "expo-image-picker": "~17.0.10",
     "expo-linking": "~8.0.11",
     "expo-notifications": "~0.32.16",
