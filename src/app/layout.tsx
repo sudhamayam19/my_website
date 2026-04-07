@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Alegreya, Alegreya_Sans } from "next/font/google";
 import Script from "next/script";
+import { ChatWidget } from "@/components/ChatWidget";
 import "./globals.css";
 
 const editorialDisplay = Alegreya({
@@ -68,6 +69,7 @@ export default function RootLayout({
       </head>
       <body className={`${editorialDisplay.variable} ${editorialBody.variable} antialiased`}>
         {children}
+        <ChatWidget />
         {gaMeasurementId && (
           <>
             <Script
