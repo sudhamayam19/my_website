@@ -7,6 +7,38 @@ interface Message {
   content: string;
 }
 
+// Render text with clickable URLs
+function MessageContent({ text, isUser }: { text: string; isUser: boolean }) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        urlRegex.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: isUser ? "#a8e6e8" : "#206a6d",
+              textDecoration: "underline",
+              wordBreak: "break-all",
+              fontWeight: 600,
+            }}
+          >
+            {part.includes("sudhamayam.vercel.app")
+              ? part.replace("https://sudhamayam.vercel.app", "").replace(/^\/blog\/|^\/podcasts\//, "") || "Read full article →"
+              : part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
 const SUGGESTED = [
   "What are her latest blog posts?",
   "What services does Sudha offer?",
@@ -273,7 +305,7 @@ export function ChatWidget() {
                           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                         }),
                   }}>
-                    {msg.content}
+                    <MessageContent text={msg.content} isUser={msg.role === "user"} />
                   </div>
                 </div>
               ))}

@@ -20,12 +20,14 @@ async function buildSystemPrompt(): Promise<string> {
     // fallback to empty if DB unavailable
   }
 
+  const siteUrl = "https://sudhamayam.vercel.app";
+
   const postsContext =
     posts.length > 0
       ? posts
           .map(
             (p, i) =>
-              `${i + 1}. "${p.title}" (${p.category}, ${new Date(p.publishedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) — ${p.excerpt}${p.views ? ` · ${p.views} views` : ""}`
+              `${i + 1}. "${p.title}" (${p.category}, ${new Date(p.publishedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) — ${p.excerpt}${p.views ? ` · ${p.views} views` : ""}\n   Link: ${siteUrl}/blog/${p.slug}`
           )
           .join("\n")
       : "No published articles yet.";
@@ -35,7 +37,7 @@ async function buildSystemPrompt(): Promise<string> {
       ? podcasts
           .map(
             (p, i) =>
-              `${i + 1}. "${p.title}" — ${p.showTitle} (${p.durationMinutes} min, ${new Date(p.publishedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) — ${p.excerpt}${p.listens ? ` · ${p.listens} listens` : ""}`
+              `${i + 1}. "${p.title}" — ${p.showTitle} (${p.durationMinutes} min, ${new Date(p.publishedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) — ${p.excerpt}${p.listens ? ` · ${p.listens} listens` : ""}\n   Link: ${siteUrl}/podcasts/${p.slug}`
           )
           .join("\n")
       : "No published podcasts yet.";
@@ -60,7 +62,7 @@ ${podcastsContext}
 - When asked about latest content, refer to the lists above with specifics (title, topic, date)
 - For booking or inquiries, direct visitors to the contact form on the website
 - Keep responses concise (3-5 sentences max)
-- If asked about a specific article or episode, share the title and what it is about
+- ALWAYS end your reply about any article or podcast with: "Read the full article here: [link]" or "Listen to the full episode here: [link]" using the exact link from above
 - Do not make up content not mentioned above
 - If asked something unrelated to Sudha or her work, politely redirect`;
 }
