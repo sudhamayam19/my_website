@@ -130,10 +130,13 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = await buildSystemPrompt();
 
+    // cache_control is valid at runtime but not in SDK types — cast to pass through
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 280,
-      system: systemPrompt,
+      system: [
+        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
+      ] as unknown as string,
       messages: messages.slice(-6),
     });
 
