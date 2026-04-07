@@ -8,9 +8,10 @@ interface Message {
 }
 
 const SUGGESTED = [
+  "What are her latest blog posts?",
   "What services does Sudha offer?",
+  "Tell me about her latest podcast",
   "How can I contact her?",
-  "Tell me about her work",
 ];
 
 export function ChatWidget() {

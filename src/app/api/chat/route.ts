@@ -1,24 +1,69 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { getBlogPosts, getPodcastEpisodes } from "@/lib/content-store";
+import type { BlogPost, PodcastEpisode } from "@/lib/site-data";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `You are a friendly assistant on Sudha Devarakonda's personal website. Help visitors learn about Sudha and her work.
+async function buildSystemPrompt(): Promise<string> {
+  let posts: BlogPost[] = [];
+  let podcasts: PodcastEpisode[] = [];
 
-About Sudha Devarakonda:
-- She is a professional RJ (Radio Jockey), Translator, and Voice Artist based in Hyderabad, India
-- She has extensive experience in Telugu and Hindi broadcasting
-- She offers voice-over services, translation services (Telugu, Hindi, English), and RJ services
-- Her website is sudhamayam.vercel.app
-- Visitors can contact her through the website's contact section
+  try {
+    const [allPosts, allPodcasts] = await Promise.all([
+      getBlogPosts(),
+      getPodcastEpisodes(),
+    ]);
+    posts = allPosts.filter((p) => p.status === "published").slice(0, 6);
+    podcasts = allPodcasts.filter((p) => p.status === "published").slice(0, 5);
+  } catch {
+    // fallback to empty if DB unavailable
+  }
 
-Guidelines:
-- Be warm, friendly, and helpful
-- Answer questions about Sudha's work, services, and how to contact her
-- For booking or detailed inquiries, direct visitors to use the contact form on the website
-- Keep responses concise (2-4 sentences max)
-- If asked something unrelated to Sudha or her work, politely redirect the conversation
-- Do not make up specific details not mentioned above`;
+  const postsContext =
+    posts.length > 0
+      ? posts
+          .map(
+            (p, i) =>
+              `${i + 1}. "${p.title}" (${p.category}, ${new Date(p.publishedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) — ${p.excerpt}${p.views ? ` · ${p.views} views` : ""}`
+          )
+          .join("\n")
+      : "No published articles yet.";
+
+  const podcastsContext =
+    podcasts.length > 0
+      ? podcasts
+          .map(
+            (p, i) =>
+              `${i + 1}. "${p.title}" — ${p.showTitle} (${p.durationMinutes} min, ${new Date(p.publishedAt).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}) — ${p.excerpt}${p.listens ? ` · ${p.listens} listens` : ""}`
+          )
+          .join("\n")
+      : "No published podcasts yet.";
+
+  return `You are a warm and knowledgeable assistant on Sudha Devarakonda's personal website (sudhamayam.vercel.app).
+
+## About Sudha Devarakonda
+- Professional RJ (Radio Jockey), Translator, and Voice Artist based in Hyderabad, India
+- 20+ years of experience in Telugu and Hindi broadcasting (started 2005)
+- Services: voice-over, narration, dubbing, translation (Telugu ↔ Hindi ↔ English), RJ hosting, podcast production
+- YouTube channel: https://youtube.com/@sudhamayam
+- Visitors can contact her via the website's contact section
+
+## Latest Blog Articles on the Website
+${postsContext}
+
+## Latest Podcast Episodes
+${podcastsContext}
+
+## Guidelines
+- Be warm, conversational, and enthusiastic about Sudha's work
+- When asked about latest content, refer to the lists above with specifics (title, topic, date)
+- For booking or inquiries, direct visitors to the contact form on the website
+- Keep responses concise (3-5 sentences max)
+- If asked about a specific article or episode, share the title and what it is about
+- Do not make up content not mentioned above
+- If asked something unrelated to Sudha or her work, politely redirect`;
+}
 
 interface Message {
   role: "user" | "assistant";
@@ -33,17 +78,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
+    const systemPrompt = await buildSystemPrompt();
+
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
-      system: SYSTEM_PROMPT,
+      max_tokens: 350,
+      system: systemPrompt,
       messages: messages.slice(-10),
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const text =
+      response.content[0].type === "text" ? response.content[0].text : "";
     return NextResponse.json({ message: text });
   } catch (error) {
     console.error("Chat API error:", error);
-    return NextResponse.json({ error: "Failed to get response" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to get response" },
+      { status: 500 }
+    );
   }
 }
