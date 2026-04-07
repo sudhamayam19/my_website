@@ -22,6 +22,23 @@ export interface MobilePost {
   likes?: number;
 }
 
+export interface MobilePodcastEpisode {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  description: string;
+  showTitle: string;
+  publishedAt: string;
+  durationMinutes: number;
+  audioUrl: string;
+  coverImageUrl?: string;
+  status: "draft" | "published";
+  featured: boolean;
+  seoDescription: string;
+  listens?: number;
+}
+
 export interface MobileComment {
   id: string;
   postId: string;
@@ -134,6 +151,13 @@ export async function fetchPosts(): Promise<MobilePost[]> {
   return data.posts;
 }
 
+export async function fetchPodcastEpisodes(): Promise<MobilePodcastEpisode[]> {
+  const data = await apiRequest<{ episodes: MobilePodcastEpisode[] }>("/api/mobile/podcasts", {
+    method: "GET",
+  });
+  return data.episodes;
+}
+
 export async function fetchComments(): Promise<MobileComment[]> {
   const data = await apiRequest<{ comments: MobileComment[] }>("/api/mobile/comments", {
     method: "GET",
@@ -143,6 +167,12 @@ export async function fetchComments(): Promise<MobileComment[]> {
 
 export async function deletePost(id: string): Promise<void> {
   await apiRequest<{ post: { id: string } }>(`/api/mobile/posts/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function deletePodcastEpisode(id: string): Promise<void> {
+  await apiRequest<{ episode: { id: string } }>(`/api/mobile/podcasts/${id}`, {
     method: "DELETE",
   });
 }
@@ -199,7 +229,7 @@ export async function registerPushToken(token: string, platform: string): Promis
   });
 }
 
-export async function uploadImage(fileUri: string, fileName: string, mimeType = "image/jpeg"): Promise<string> {
+export async function uploadFile(fileUri: string, fileName: string, mimeType: string): Promise<string> {
   const formData = new FormData();
   formData.append("file", {
     uri: fileUri,
@@ -212,6 +242,14 @@ export async function uploadImage(fileUri: string, fileName: string, mimeType = 
     body: formData,
   });
   return data.url;
+}
+
+export async function uploadImage(
+  fileUri: string,
+  fileName: string,
+  mimeType = "image/jpeg",
+): Promise<string> {
+  return await uploadFile(fileUri, fileName, mimeType);
 }
 
 export async function savePost(input: {
@@ -235,4 +273,27 @@ export async function savePost(input: {
     body: JSON.stringify(input),
   });
   return data.post;
+}
+
+export async function savePodcastEpisode(input: {
+  id?: string;
+  title: string;
+  excerpt: string;
+  description: string;
+  showTitle: string;
+  publishedAt: string;
+  durationMinutes: number;
+  audioUrl: string;
+  coverImageUrl?: string;
+  status: "draft" | "published";
+  featured: boolean;
+  seoDescription: string;
+}): Promise<{ id: string }> {
+  const path = input.id ? `/api/mobile/podcasts/${input.id}` : "/api/mobile/podcasts";
+  const method = input.id ? "PATCH" : "POST";
+  const data = await apiRequest<{ episode: { id: string } }>(path, {
+    method,
+    body: JSON.stringify(input),
+  });
+  return data.episode;
 }

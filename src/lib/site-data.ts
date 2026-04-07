@@ -1,4 +1,5 @@
 export type PostStatus = "published" | "draft";
+export type PodcastStatus = "published" | "draft";
 export type CommentStatus = "approved" | "pending" | "hidden" | "spam";
 
 export interface BlogPost {
@@ -31,6 +32,23 @@ export interface BlogComment {
   likes?: number;
   pinned?: boolean;
   highlighted?: boolean;
+}
+
+export interface PodcastEpisode {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  description: string;
+  showTitle: string;
+  publishedAt: string;
+  durationMinutes: number;
+  audioUrl: string;
+  coverImageUrl?: string;
+  status: PodcastStatus;
+  featured: boolean;
+  seoDescription: string;
+  listens?: number;
 }
 
 export interface TimelineEvent {
@@ -321,6 +339,8 @@ export const defaultBlogComments: BlogComment[] = [
   },
 ];
 
+export const defaultPodcastEpisodes: PodcastEpisode[] = [];
+
 export function formatDisplayDate(input: string): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -346,4 +366,20 @@ export function formatRelativeTime(input: string): string {
 
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+}
+
+export function formatDurationMinutes(minutes: number): string {
+  const safeMinutes = Math.max(1, Math.round(minutes));
+  const hours = Math.floor(safeMinutes / 60);
+  const remainingMinutes = safeMinutes % 60;
+
+  if (hours === 0) {
+    return `${remainingMinutes} min`;
+  }
+
+  if (remainingMinutes === 0) {
+    return `${hours} hr`;
+  }
+
+  return `${hours} hr ${remainingMinutes} min`;
 }

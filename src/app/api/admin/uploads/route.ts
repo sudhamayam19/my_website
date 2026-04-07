@@ -26,11 +26,16 @@ export async function POST(request: Request) {
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Image file is required." }, { status: 400 });
+      return NextResponse.json({ error: "A file is required." }, { status: 400 });
     }
 
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Only image uploads are supported." }, { status: 400 });
+    const isImage = file.type.startsWith("image/");
+    const isAudio = file.type.startsWith("audio/");
+    if (!isImage && !isAudio) {
+      return NextResponse.json(
+        { error: "Only image and audio uploads are supported." },
+        { status: 400 },
+      );
     }
 
     const client = getConvexClient();
@@ -44,7 +49,7 @@ export async function POST(request: Request) {
     });
 
     if (!uploadResponse.ok) {
-      throw new Error("Failed to upload image.");
+      throw new Error(`Failed to upload ${isAudio ? "audio" : "file"}.`);
     }
 
     const uploadResult = (await uploadResponse.json()) as { storageId?: string };
@@ -57,14 +62,14 @@ export async function POST(request: Request) {
     });
 
     if (!url) {
-      throw new Error("Image uploaded but URL could not be generated.");
+      throw new Error("File uploaded but URL could not be generated.");
     }
 
     return NextResponse.json({ url });
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Unable to upload image.",
+        error: error instanceof Error ? error.message : "Unable to upload file.",
       },
       { status: 500 },
     );

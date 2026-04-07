@@ -49,6 +49,28 @@ export default defineSchema({
     highlighted: v.optional(v.boolean()),
   }).index("by_postId_createdAtTs", ["postId", "createdAtTs"]),
 
+  podcastEpisodes: defineTable({
+    slug: v.string(),
+    title: v.string(),
+    excerpt: v.string(),
+    description: v.string(),
+    showTitle: v.string(),
+    publishedAt: v.string(),
+    publishedAtTs: v.number(),
+    durationMinutes: v.number(),
+    audioUrl: v.string(),
+    coverImageUrl: v.optional(v.string()),
+    status: v.union(v.literal("published"), v.literal("draft")),
+    featured: v.boolean(),
+    seoDescription: v.string(),
+    listens: v.optional(v.number()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_status_publishedAtTs", ["status", "publishedAtTs"])
+    .index("by_featured_publishedAtTs", ["featured", "publishedAtTs"]),
+
   adminDeviceTokens: defineTable({
     token: v.string(),
     platform: v.string(),
