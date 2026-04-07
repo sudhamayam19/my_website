@@ -75,7 +75,7 @@ export function ChatWidget() {
                 S
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">Sudha's Assistant</p>
+                <p className="text-sm font-semibold text-white">Sudha&apos;s Assistant</p>
                 <p className="text-xs text-[#8da8b3]">Ask me anything</p>
               </div>
             </div>
