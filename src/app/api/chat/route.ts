@@ -130,23 +130,12 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = await buildSystemPrompt();
 
-    // Use prompt caching for the system prompt (saves ~90% on repeated calls)
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 280,
-      system: [
-        {
-          type: "text",
-          text: systemPrompt,
-          cache_control: { type: "ephemeral" },
-        },
-      ] as Anthropic.Messages.TextBlockParam[],
+      system: systemPrompt,
       messages: messages.slice(-6),
     });
-
-    if (!("content" in response)) {
-      return NextResponse.json({ error: "No response" }, { status: 500 });
-    }
 
     const text =
       response.content[0].type === "text" ? response.content[0].text : "";
