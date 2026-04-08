@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
-import { initLlama, LlamaContext } from "llama.rn";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -45,6 +44,17 @@ Help Sudha with:
 - Generating post ideas based on her work
 
 Keep responses practical, warm, and professional. When writing content, match her voice — conversational, thoughtful, and engaging.`;
+
+// Lazy load llama.rn to prevent crash if native module fails
+let initLlama: typeof import("llama.rn").initLlama | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  initLlama = (require("llama.rn") as typeof import("llama.rn")).initLlama;
+} catch {
+  initLlama = null;
+}
+
+type LlamaContext = import("llama.rn").LlamaContext;
 
 interface Message {
   role: "user" | "assistant";
@@ -105,6 +115,11 @@ export default function AssistantTab() {
   };
 
   const loadModel = async () => {
+    if (!initLlama) {
+      setStatus("error");
+      Alert.alert("Not supported", "On-device AI could not load on this device. Please reinstall the app.");
+      return;
+    }
     setStatus("loading");
     try {
       const ctx = await initLlama({
@@ -112,7 +127,7 @@ export default function AssistantTab() {
         use_mlock: true,
         n_ctx: 2048,
         n_threads: 4,
-        n_gpu_layers: 0, // CPU only for stability; set higher if GPU works
+        n_gpu_layers: 0,
       });
       contextRef.current = ctx;
       setStatus("ready");
