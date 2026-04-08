@@ -45,10 +45,10 @@ Help Sudha with:
 
 Keep responses practical, warm, and professional. When writing content, match her voice — conversational, thoughtful, and engaging.`;
 
-// Lazy load llama.rn to prevent crash if native module fails
+// Lazy load llama.rn to prevent crash if native module fails.
 let initLlama: typeof import("llama.rn").initLlama | null = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   initLlama = (require("llama.rn") as typeof import("llama.rn")).initLlama;
 } catch {
   initLlama = null;
@@ -75,10 +75,11 @@ export default function AssistantTab() {
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    checkModelExists();
+    void checkModelExists();
     return () => {
       contextRef.current?.release();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkModelExists = async () => {
@@ -108,7 +109,7 @@ export default function AssistantTab() {
       );
       await downloadResumable.downloadAsync();
       await loadModel();
-    } catch (e) {
+    } catch {
       setStatus("error");
       Alert.alert("Download failed", "Please check your internet and try again.");
     }
@@ -138,7 +139,7 @@ export default function AssistantTab() {
             "Namaste Sudha! 🙏 I'm your personal AI assistant running fully on your phone — no internet needed, completely private.\n\nHow can I help you today? I can write blog posts, draft replies, create RJ scripts, or help with translations!",
         },
       ]);
-    } catch (e) {
+    } catch {
       setStatus("error");
       Alert.alert("Model load failed", "Try restarting the app.");
     }
