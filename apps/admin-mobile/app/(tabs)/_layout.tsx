@@ -36,6 +36,7 @@ export default function TabsLayout() {
             index: focused ? "home" : "home-outline",
             posts: focused ? "document-text" : "document-text-outline",
             comments: focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline",
+            assistant: focused ? "sparkles" : "sparkles-outline",
             profile: focused ? "person-circle" : "person-circle-outline",
           };
 
@@ -46,6 +47,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: "Home" }} />
       <Tabs.Screen name="posts" options={{ title: "Posts" }} />
       <Tabs.Screen name="comments" options={{ title: "Comments" }} />
+      <Tabs.Screen name="assistant" options={{ title: "Assistant" }} />
       <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );

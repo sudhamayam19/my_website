@@ -19,7 +19,14 @@
       "expo-router",
       "expo-secure-store",
       "expo-image-picker",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "llama.rn",
+        {
+          "enableOpenCL": true,
+          "forceCxx20": true
+        }
+      ]
     ],
     "splash": {
       "image": "../../image.png",

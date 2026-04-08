@@ -1,6 +1,6 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import React from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export function AdminScreen({
   eyebrow,
@@ -14,14 +14,14 @@ export function AdminScreen({
   title: string;
   subtitle: string;
   aside?: ReactNode;
-  refreshControl?: ReactNode;
+  refreshControl?: React.ReactElement<React.ComponentProps<typeof RefreshControl>>;
 }>) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={refreshControl as React.ReactElement | undefined}
+        refreshControl={refreshControl}
       >
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
