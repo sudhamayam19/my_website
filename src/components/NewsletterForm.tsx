@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 
-export function NewsletterForm() {
+export function NewsletterForm({ variant = "light" }: { variant?: "light" | "dark" }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
+  const dark = variant === "dark";
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,6 +51,38 @@ export function NewsletterForm() {
       );
     }
   };
+
+  if (dark) {
+    return (
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#f0dfc5]">Stay Updated</p>
+          <p className="mt-1 text-sm text-[#b7ab9e]">New posts and podcasts straight to your inbox.</p>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="sr-only" htmlFor="footer-newsletter-email">Email</label>
+          <input
+            id="footer-newsletter-email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="Your email"
+            disabled={status === "loading" || status === "success"}
+            className="rounded-full border border-[#3b4b57] bg-[#1d3b46] px-5 py-2.5 text-sm text-[#e9ddcd] placeholder-[#7a8f98] outline-none transition focus:border-[#5a8f98] disabled:opacity-60"
+            required
+          />
+          <button
+            type="submit"
+            disabled={status === "loading" || status === "success"}
+            className="rounded-full bg-gradient-to-r from-[#215c66] to-[#b6563f] px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {status === "loading" ? "..." : status === "success" ? "Subscribed ✓" : "Subscribe"}
+          </button>
+          {status === "error" && <p className="text-xs text-red-400">{message}</p>}
+        </form>
+      </div>
+    );
+  }
 
   return (
     <section className="editorial-card relative overflow-hidden p-8">
