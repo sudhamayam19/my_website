@@ -348,3 +348,15 @@ export async function savePodcastEpisode(input: {
   });
   return data.episode;
 }
+
+export interface NewsletterSubscriber {
+  email: string;
+  createdAt: string;
+}
+
+export async function fetchSubscribers(): Promise<NewsletterSubscriber[]> {
+  const data = await apiRequest<{ subscribers: NewsletterSubscriber[] }>("/api/mobile/newsletter/subscribers", {
+    method: "GET",
+  });
+  return data.subscribers;
+}

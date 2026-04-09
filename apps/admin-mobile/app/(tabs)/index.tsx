@@ -2,16 +2,25 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { AuthGuard } from "@/components/auth-guard";
 import { AdminScreen, Card, Pill } from "@/components/screen";
-import { fetchDashboard, type MobileDashboardResponse } from "@/lib/mobile-api";
+import {
+  fetchDashboard,
+  fetchSubscribers,
+  type MobileDashboardResponse,
+  type NewsletterSubscriber,
+} from "@/lib/mobile-api";
 
 export default function HomeScreen() {
   const [data, setData] = useState<MobileDashboardResponse | null>(null);
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboard()
-      .then(setData)
+    Promise.all([
+      fetchDashboard(),
+      fetchSubscribers().catch(() => [] as NewsletterSubscriber[]),
+    ])
+      .then(([dashboard, subs]) => { setData(dashboard); setSubscribers(subs); })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load."))
       .finally(() => setLoading(false));
   }, []);
@@ -55,8 +64,39 @@ export default function HomeScreen() {
                     {(data.stats.totalViews ?? 0).toLocaleString()}
                   </Text>
                 </View>
+                <View style={[styles.statTile, styles.statTileSubs]}>
+                  <Pill label="Subscribers" tone="teal" />
+                  <Text style={styles.statValue}>{subscribers.length}</Text>
+                </View>
               </View>
             </Card>
+
+            {subscribers.length > 0 && (
+              <Card
+                title={`Newsletter · ${subscribers.length} subscriber${subscribers.length === 1 ? "" : "s"}`}
+                description="Everyone who signed up to receive updates."
+              >
+                <View style={styles.stack}>
+                  {subscribers.slice(0, 20).map((s) => (
+                    <View key={s.email} style={styles.subRow}>
+                      <View style={styles.subAvatar}>
+                        <Text style={styles.subAvatarText}>{s.email[0].toUpperCase()}</Text>
+                      </View>
+                      <View style={styles.copy}>
+                        <Text style={styles.subEmail}>{s.email}</Text>
+                        <Text style={styles.itemMeta}>
+                          {new Date(s.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                  {subscribers.length > 20 && (
+                    <Text style={styles.moreText}>+{subscribers.length - 20} more</Text>
+                  )}
+                </View>
+              </Card>
+            )}
+
             {data.topPosts && data.topPosts.length > 0 && (
               <Card title="Top posts by views">
                 <View style={styles.stack}>
@@ -129,7 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   stack: {
-    gap: 12,
+    gap: 10,
   },
   item: {
     backgroundColor: "#f7efe4",
@@ -154,6 +194,9 @@ const styles = StyleSheet.create({
   },
   statTileViews: {
     backgroundColor: "#e6f4f4",
+  },
+  statTileSubs: {
+    backgroundColor: "#d9ece8",
   },
   rank: {
     color: "#b89572",
@@ -182,5 +225,37 @@ const styles = StyleSheet.create({
     color: "#445760",
     fontSize: 14,
     lineHeight: 20,
+  },
+  subRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#f7efe4",
+    borderRadius: 18,
+    padding: 12,
+  },
+  subAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#d9ece8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  subAvatarText: {
+    color: "#1f6973",
+    fontWeight: "900",
+    fontSize: 15,
+  },
+  subEmail: {
+    color: "#19313b",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  moreText: {
+    color: "#61747d",
+    fontSize: 13,
+    textAlign: "center",
+    paddingVertical: 4,
   },
 });
