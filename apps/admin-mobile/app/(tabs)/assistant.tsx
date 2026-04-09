@@ -263,15 +263,15 @@ export default function AssistantTab() {
     setMsgs(next); setInput(""); setImgUri(null);
     setRunning(true); setThinking(false); setPartial("");
     KeepAwake.activateKeepAwakeAsync("ai-inference");
+    let full = "";
     try {
-      let full = "";
-        await llamaRef.current.completion(
-          { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...next.map((m) => ({ role: m.role, content: m.content }))],
+      await llamaRef.current.completion(
+        { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...next.map((m) => ({ role: m.role, content: m.content }))],
           n_predict: 400,
           temperature: 0.45,
           top_p: 0.9,
           stop: ["<end_of_turn>", "<eos>", "<think>", "<|channel|>thought", "Thinking Process:"] },
-          (data) => {
+        (data) => {
           if (data.token) {
             full += data.token;
             setThinking(isInsideThink(full));
@@ -291,7 +291,7 @@ export default function AssistantTab() {
       setPartial("");
     } catch {
       // stopCompletion throws — that's expected, just show what was generated
-      const clean = stripThinking(partial);
+      const clean = stripThinking(full);
       if (clean.length > 0) {
         setMsgs((prev) => [...prev, { role: "assistant", content: clean }]);
       }
@@ -336,7 +336,7 @@ export default function AssistantTab() {
   const pickImg = async () => {
     const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!granted) { Alert.alert("Permission needed"); return; }
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
     if (!res.canceled) setImgUri(res.assets[0].uri);
   };
 
