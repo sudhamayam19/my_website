@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import * as KeepAwake from "expo-keep-awake";
+import * as Notifications from "expo-notifications";
 import * as Speech from "expo-speech";
 import * as SpeechRecognition from "expo-speech-recognition";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -77,6 +78,23 @@ function isInsideThink(text: string) {
   if (gemmaOpen > 0) return gemmaClose < gemmaOpen;
   // Classic <think> style
   return (text.match(/<think>/gi) ?? []).length > (text.match(/<\/think>/gi) ?? []).length;
+}
+
+// ── background notification (keeps Android from killing the process) ─────────
+const NOTIF_ID = "ai-inference";
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({ shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false }),
+});
+async function showInferenceNotif() {
+  await Notifications.requestPermissionsAsync();
+  await Notifications.scheduleNotificationAsync({
+    identifier: NOTIF_ID,
+    content: { title: "AI Assistant", body: "Generating response… You can switch apps.", sticky: true } as Notifications.NotificationContentInput,
+    trigger: null,
+  });
+}
+async function hideInferenceNotif() {
+  await Notifications.dismissNotificationAsync(NOTIF_ID);
 }
 
 // ── llama.rn lazy load ───────────────────────────────────────────────────────
@@ -255,6 +273,7 @@ export default function AssistantTab() {
 
   const stopGeneration = async () => {
     await llamaRef.current?.stopCompletion();
+    void hideInferenceNotif();
     setRunning(false);
     setThinking(false);
   };
@@ -267,6 +286,7 @@ export default function AssistantTab() {
     setMsgs(next); setInput(""); setImgUri(null);
     setRunning(true); setThinking(false); setPartial("");
     KeepAwake.activateKeepAwakeAsync("ai-inference");
+    void showInferenceNotif();
     let full = "";
     try {
       await llamaRef.current.completion(
@@ -303,6 +323,7 @@ export default function AssistantTab() {
     } finally {
       setRunning(false); setThinking(false);
       KeepAwake.deactivateKeepAwake("ai-inference");
+      void hideInferenceNotif();
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
