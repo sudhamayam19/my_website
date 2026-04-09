@@ -52,26 +52,30 @@ const MODEL_PATH     = `${FileSystem.documentDirectory}${MODEL_FILENAME}`;
 const MODEL_SIZE     = "3.4 GB";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
+// Gemma 4 wraps thinking in <|channel|>thought ... <|channel|>
+// Some models use <think>...</think> — handle both.
 function stripThinking(text: string) {
-  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  let cleaned = text
+    .replace(/<\|channel\|>thought[\s\S]*?<\|channel\|>/gi, "")
+    .replace(/<think>[\s\S]*?<\/think>/gi, "");
 
   if (/final output generation/i.test(cleaned)) {
     cleaned = cleaned.replace(/^[\s\S]*?final output generation[^A-Za-z0-9]*/i, "");
   }
-
   if (/<\|channel\|>final/i.test(cleaned)) {
     cleaned = cleaned.replace(/^[\s\S]*?<\|channel\|>final\s*/i, "");
   }
-
   cleaned = cleaned.replace(/<\|channel\|>\w+/gi, "");
   cleaned = cleaned.replace(/^thinking process:\s*/i, "");
 
   return cleaned.replace(/^\s+/, "").trim();
 }
 function isInsideThink(text: string) {
-  if (/<\|channel\|>thought/i.test(text) && !/<\|channel\|>final/i.test(text)) {
-    return true;
-  }
+  // Gemma-style: opened by <|channel|>thought, closed by next <|channel|>
+  const gemmaOpen  = (text.match(/<\|channel\|>thought/gi) ?? []).length;
+  const gemmaClose = (text.match(/<\|channel\|>/gi) ?? []).length - gemmaOpen;
+  if (gemmaOpen > 0) return gemmaClose < gemmaOpen;
+  // Classic <think> style
   return (text.match(/<think>/gi) ?? []).length > (text.match(/<\/think>/gi) ?? []).length;
 }
 
