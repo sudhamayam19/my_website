@@ -132,6 +132,27 @@
   }
 }
 
+@keyframes dailyDoseScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes dailyDosePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 28px rgba(32, 106, 109, 0.12);
+  }
+  50% {
+    transform: scale(1.012);
+    box-shadow: 0 14px 34px rgba(182, 86, 63, 0.18);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -234,5 +255,44 @@
 
   .editorial-lift {
     animation: drift 6s ease-in-out infinite;
+  }
+
+  .daily-dose-wrap {
+    @apply relative z-20 border-b px-4 py-2 sm:px-6 lg:px-8;
+    border-color: rgba(205, 184, 154, 0.7);
+    background: linear-gradient(90deg, rgba(31, 105, 115, 0.95), rgba(184, 92, 68, 0.92));
+    color: #fffaf3;
+  }
+
+  .daily-dose-marquee {
+    @apply mx-auto max-w-7xl overflow-hidden;
+  }
+
+  .daily-dose-track {
+    @apply flex min-w-max items-center gap-4 whitespace-nowrap;
+    width: max-content;
+    animation: dailyDoseScroll 28s linear infinite;
+  }
+
+  .daily-dose-badge {
+    @apply inline-flex rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em];
+    border-color: rgba(255, 248, 239, 0.35);
+    background: rgba(255, 250, 243, 0.12);
+  }
+
+  .daily-dose-copy {
+    @apply text-sm font-semibold sm:text-base;
+    letter-spacing: 0.01em;
+  }
+
+  .daily-dose-sep {
+    @apply text-base opacity-70;
+  }
+
+  .daily-dose-flash {
+    @apply mx-auto flex max-w-7xl flex-wrap items-center gap-3 rounded-2xl border px-4 py-3;
+    border-color: rgba(255, 248, 239, 0.28);
+    background: rgba(255, 250, 243, 0.12);
+    animation: dailyDosePulse 3.6s ease-in-out infinite;
   }
 }

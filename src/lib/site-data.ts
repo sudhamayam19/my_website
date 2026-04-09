@@ -1,6 +1,7 @@
 export type PostStatus = "published" | "draft";
 export type PodcastStatus = "published" | "draft";
 export type CommentStatus = "approved" | "pending" | "hidden" | "spam";
+export type DailyDoseStyle = "scroll" | "flash";
 
 export interface BlogPost {
   id: string;
@@ -49,6 +50,15 @@ export interface PodcastEpisode {
   featured: boolean;
   seoDescription: string;
   listens?: number;
+}
+
+export interface DailyDose {
+  id: string;
+  text: string;
+  author?: string;
+  active: boolean;
+  style: DailyDoseStyle;
+  updatedAt: string;
 }
 
 export interface TimelineEvent {
@@ -338,6 +348,15 @@ export const defaultBlogComments: BlogComment[] = [
     status: "approved",
   },
 ];
+
+export const defaultDailyDose: DailyDose = {
+  id: "main",
+  text: "",
+  author: "",
+  active: false,
+  style: "scroll",
+  updatedAt: "2026-04-09T00:00:00.000Z",
+};
 
 export const defaultPodcastEpisodes: PodcastEpisode[] = [];
 

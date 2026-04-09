@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 const postStatusValidator = v.union(v.literal("published"), v.literal("draft"));
 const podcastStatusValidator = v.union(v.literal("published"), v.literal("draft"));
+const dailyDoseStyleValidator = v.union(v.literal("scroll"), v.literal("flash"));
 const commentStatusValidator = v.union(
   v.literal("approved"),
   v.literal("pending"),
@@ -40,6 +41,13 @@ const podcastInputValidator = v.object({
   status: podcastStatusValidator,
   featured: v.boolean(),
   seoDescription: v.string(),
+});
+
+const dailyDoseInputValidator = v.object({
+  text: v.string(),
+  author: v.optional(v.string()),
+  active: v.boolean(),
+  style: dailyDoseStyleValidator,
 });
 
 interface PostRecord {
@@ -95,6 +103,17 @@ interface CommentRecord {
   likes?: number;
   pinned?: boolean;
   highlighted?: boolean;
+}
+
+interface DailyDoseRecord {
+  _id: string;
+  singletonKey: string;
+  text: string;
+  author?: string;
+  active: boolean;
+  style: "scroll" | "flash";
+  updatedAt: string;
+  updatedAtTs: number;
 }
 
 function slugify(value: string): string {
@@ -213,6 +232,20 @@ function normalizePodcastInput(input: {
   };
 }
 
+function normalizeDailyDoseInput(input: {
+  text: string;
+  author?: string;
+  active: boolean;
+  style: "scroll" | "flash";
+}) {
+  return {
+    text: input.text.trim(),
+    author: input.author?.trim() || undefined,
+    active: input.active && input.text.trim().length > 0,
+    style: input.style,
+  };
+}
+
 async function buildUniqueSlug(db: unknown, requested: string, currentId?: string) {
   const database = db as {
     query(table: "posts"): {
@@ -325,6 +358,17 @@ function mapComment(doc: CommentRecord) {
     likes: doc.likes ?? 0,
     pinned: doc.pinned ?? false,
     highlighted: doc.highlighted ?? false,
+  };
+}
+
+function mapDailyDose(doc: DailyDoseRecord) {
+  return {
+    id: String(doc._id),
+    text: doc.text,
+    author: doc.author,
+    active: doc.active,
+    style: doc.style,
+    updatedAt: doc.updatedAt,
   };
 }
 
@@ -558,6 +602,18 @@ export const listAdminDeviceTokens = queryGeneric({
       token: item.token,
       platform: item.platform,
     }));
+  },
+});
+
+export const getDailyDose = queryGeneric({
+  args: {},
+  handler: async (ctx) => {
+    const dose = await ctx.db
+      .query("dailyDose")
+      .withIndex("by_singletonKey", (query) => query.eq("singletonKey", "main"))
+      .first();
+
+    return dose ? mapDailyDose(dose) : null;
   },
 });
 
@@ -902,6 +958,48 @@ export const registerAdminDeviceToken = mutationGeneric({
     return {
       token,
       platform,
+    };
+  },
+});
+
+export const saveDailyDose = mutationGeneric({
+  args: {
+    input: dailyDoseInputValidator,
+  },
+  handler: async (ctx, args) => {
+    const normalized = normalizeDailyDoseInput(args.input);
+    const now = new Date().toISOString();
+    const updatedAtTs = Date.parse(now);
+    const existing = await ctx.db
+      .query("dailyDose")
+      .withIndex("by_singletonKey", (query) => query.eq("singletonKey", "main"))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        ...normalized,
+        updatedAt: now,
+        updatedAtTs,
+      });
+
+      return {
+        id: String(existing._id),
+        ...normalized,
+        updatedAt: now,
+      };
+    }
+
+    const id = await ctx.db.insert("dailyDose", {
+      singletonKey: "main",
+      ...normalized,
+      updatedAt: now,
+      updatedAtTs,
+    });
+
+    return {
+      id: String(id),
+      ...normalized,
+      updatedAt: now,
     };
   },
 });

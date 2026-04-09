@@ -1,12 +1,15 @@
 import { ConvexHttpClient } from "convex/browser";
 import { anyApi } from "convex/server";
 import {
+  defaultDailyDose,
   defaultBlogComments,
   defaultBlogPosts,
   defaultPodcastEpisodes,
   type BlogComment,
   type BlogPost,
   type CommentStatus,
+  type DailyDose,
+  type DailyDoseStyle,
   type PodcastEpisode,
   type PodcastStatus,
   type PostStatus,
@@ -58,6 +61,13 @@ export interface PodcastEpisodeInput {
   seoDescription: string;
 }
 
+export interface DailyDoseInput {
+  text: string;
+  author?: string;
+  active: boolean;
+  style: DailyDoseStyle;
+}
+
 let seedPromise: Promise<void> | null = null;
 
 function getConvexClient() {
@@ -101,6 +111,10 @@ function getFallbackPodcastEpisodes(options?: { includeDrafts?: boolean }): Podc
     ? defaultPodcastEpisodes
     : defaultPodcastEpisodes.filter((episode) => episode.status === "published");
   return sortPodcastEpisodes(list);
+}
+
+function getFallbackDailyDose(): DailyDose {
+  return { ...defaultDailyDose };
 }
 
 function ensureConvexForWrites(client: ConvexHttpClient | null): ConvexHttpClient {
@@ -406,6 +420,25 @@ export async function incrementPodcastListen(id: string): Promise<number> {
   }
 }
 
+export async function getDailyDose(): Promise<DailyDose> {
+  const client = getConvexClient();
+  if (!client) {
+    return getFallbackDailyDose();
+  }
+
+  const isReady = await tryEnsureSeeded(client);
+  if (!isReady) {
+    return getFallbackDailyDose();
+  }
+
+  try {
+    const dose = await client.query(api.content.getDailyDose, {});
+    return dose ?? getFallbackDailyDose();
+  } catch {
+    return getFallbackDailyDose();
+  }
+}
+
 export async function createPost(input: PostInput): Promise<{ id: string }> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.createPost, { input });
@@ -488,6 +521,11 @@ export async function addComment(input: {
 }): Promise<BlogComment> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.addComment, input);
+}
+
+export async function saveDailyDose(input: DailyDoseInput): Promise<DailyDose> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.saveDailyDose, { input });
 }
 
 export async function addNewsletterSubscriber(email: string): Promise<{ alreadySubscribed: boolean }> {

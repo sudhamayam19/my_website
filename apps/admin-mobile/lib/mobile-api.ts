@@ -61,6 +61,15 @@ export interface MobileTopPost {
   views: number;
 }
 
+export interface MobileDailyDose {
+  id: string;
+  text: string;
+  author?: string;
+  active: boolean;
+  style: "scroll" | "flash";
+  updatedAt: string;
+}
+
 export interface MobileDashboardResponse {
   stats: {
     totalPosts: number;
@@ -163,6 +172,26 @@ export async function fetchComments(): Promise<MobileComment[]> {
     method: "GET",
   });
   return data.comments;
+}
+
+export async function fetchDailyDose(): Promise<MobileDailyDose> {
+  const data = await apiRequest<{ dose: MobileDailyDose }>("/api/mobile/daily-dose", {
+    method: "GET",
+  });
+  return data.dose;
+}
+
+export async function saveDailyDose(input: {
+  text: string;
+  author?: string;
+  active: boolean;
+  style: "scroll" | "flash";
+}): Promise<MobileDailyDose> {
+  const data = await apiRequest<{ dose: MobileDailyDose }>("/api/mobile/daily-dose", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+  return data.dose;
 }
 
 export async function deletePost(id: string): Promise<void> {

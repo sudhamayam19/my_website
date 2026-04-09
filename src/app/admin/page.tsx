@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminSessionControls } from "@/components/admin/AdminSessionControls";
 import { CommentActionButtons } from "@/components/admin/CommentActionButtons";
+import { DailyDoseEditor } from "@/components/admin/DailyDoseEditor";
 import { DeleteCommentButton } from "@/components/admin/DeleteCommentButton";
 import { DeletePodcastButton } from "@/components/admin/DeletePodcastButton";
 import { DeletePostButton } from "@/components/admin/DeletePostButton";
@@ -11,6 +12,7 @@ import { requireAdmin } from "@/lib/admin-access";
 import {
   getAdminStats,
   getBlogPosts,
+  getDailyDose,
   getPodcastEpisodes,
   getTopPostsByViews,
 } from "@/lib/content-store";
@@ -27,11 +29,12 @@ const adminNav = [
 export default async function AdminDashboardPage() {
   await requireAdmin("/admin");
   const stats = await getAdminStats();
-  const [posts, episodes, comments, topPosts] = await Promise.all([
+  const [posts, episodes, comments, topPosts, dailyDose] = await Promise.all([
     getBlogPosts({ includeDrafts: true }),
     getPodcastEpisodes({ includeDrafts: true }),
     getRecentComments(12),
     getTopPostsByViews(5),
+    getDailyDose(),
   ]);
 
   return (
@@ -176,6 +179,23 @@ export default async function AdminDashboardPage() {
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section className="editorial-card mt-8 p-6 sm:p-8">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#2a6670]">
+                  Website Highlight
+                </p>
+                <h2 className="display-font mt-2 text-4xl font-bold text-[#1f2d39]">
+                  Daily Dose
+                </h2>
+              </div>
+              <span className="rounded-full bg-[#edf7f6] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[#2a6670]">
+                {dailyDose.active ? "Live" : "Hidden"}
+              </span>
+            </div>
+            <DailyDoseEditor initialDose={dailyDose} />
           </section>
 
           <section className="editorial-card mt-8 p-6 sm:p-8">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Alegreya, Alegreya_Sans } from "next/font/google";
 import Script from "next/script";
 import { ChatWidget } from "@/components/ChatWidget";
+import { DailyDoseBanner } from "@/components/DailyDoseBanner";
 import "./globals.css";
 
 const editorialDisplay = Alegreya({
@@ -47,7 +48,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -68,6 +69,7 @@ export default function RootLayout({
         )}
       </head>
       <body className={`${editorialDisplay.variable} ${editorialBody.variable} antialiased`}>
+        <DailyDoseBanner />
         {children}
         <ChatWidget />
         {gaMeasurementId && (

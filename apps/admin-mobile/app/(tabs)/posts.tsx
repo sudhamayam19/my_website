@@ -22,12 +22,15 @@ import { AdminScreen, Card, Pill } from "@/components/screen";
 import {
   deletePodcastEpisode,
   deletePost,
+  fetchDailyDose,
   fetchPodcastEpisodes,
   fetchPosts,
+  saveDailyDose,
   savePodcastEpisode,
   savePost,
   uploadFile,
   uploadImage,
+  type MobileDailyDose,
   type MobilePodcastEpisode,
   type MobilePost,
 } from "@/lib/mobile-api";
@@ -67,6 +70,13 @@ interface PodcastDraft {
   seoDescription: string;
 }
 
+interface DailyDoseDraft {
+  text: string;
+  author: string;
+  active: boolean;
+  style: "scroll" | "flash";
+}
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 const toPostDraft = (post?: MobilePost): PostDraft => ({
@@ -99,11 +109,19 @@ const toPodcastDraft = (episode?: MobilePodcastEpisode): PodcastDraft => ({
   seoDescription: episode?.seoDescription ?? episode?.excerpt ?? "",
 });
 
+const toDailyDoseDraft = (dose?: MobileDailyDose): DailyDoseDraft => ({
+  text: dose?.text ?? "",
+  author: dose?.author ?? "",
+  active: dose?.active ?? false,
+  style: dose?.style ?? "scroll",
+});
+
 export default function PostsScreen() {
   const [kind, setKind] = useState<Kind>("articles");
   const [editorKind, setEditorKind] = useState<Kind>("articles");
   const [posts, setPosts] = useState<MobilePost[]>([]);
   const [episodes, setEpisodes] = useState<MobilePodcastEpisode[]>([]);
+  const [dailyDose, setDailyDose] = useState<DailyDoseDraft>(toDailyDoseDraft());
   const [postDraft, setPostDraft] = useState<PostDraft>(toPostDraft());
   const [podcastDraft, setPodcastDraft] = useState<PodcastDraft>(toPodcastDraft());
   const [filter, setFilter] = useState<Filter>("all");
@@ -113,14 +131,16 @@ export default function PostsScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [savingDose, setSavingDose] = useState(false);
 
   const loadContent = () => {
     setLoading(true);
     setError("");
-    Promise.all([fetchPosts(), fetchPodcastEpisodes()])
-      .then(([nextPosts, nextEpisodes]) => {
+    Promise.all([fetchPosts(), fetchPodcastEpisodes(), fetchDailyDose()])
+      .then(([nextPosts, nextEpisodes, nextDose]) => {
         setPosts(nextPosts);
         setEpisodes(nextEpisodes);
+        setDailyDose(toDailyDoseDraft(nextDose));
       })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load content."))
       .finally(() => setLoading(false));
@@ -209,6 +229,25 @@ export default function PostsScreen() {
     );
     setPodcastDraft((current) => ({ ...current, audioUrl: url }));
     setFeedback("Audio uploaded.");
+  };
+
+  const saveDose = async () => {
+    setSavingDose(true);
+    setFeedback("");
+    try {
+      const saved = await saveDailyDose({
+        text: dailyDose.text,
+        author: dailyDose.author,
+        active: dailyDose.active,
+        style: dailyDose.style,
+      });
+      setDailyDose(toDailyDoseDraft(saved));
+      setFeedback("Daily Dose updated.");
+    } catch (reason) {
+      setFeedback(reason instanceof Error ? reason.message : "Unable to save Daily Dose.");
+    } finally {
+      setSavingDose(false);
+    }
   };
 
   const saveCurrent = async (status: "draft" | "published") => {
@@ -300,6 +339,49 @@ export default function PostsScreen() {
             <Pressable style={[styles.segment, kind === "articles" ? styles.segmentActive : null]} onPress={() => setKind("articles")}><Text style={[styles.segmentText, kind === "articles" ? styles.segmentTextActive : null]}>Articles</Text></Pressable>
             <Pressable style={[styles.segment, kind === "podcasts" ? styles.segmentActive : null]} onPress={() => setKind("podcasts")}><Text style={[styles.segmentText, kind === "podcasts" ? styles.segmentTextActive : null]}>Podcasts</Text></Pressable>
           </View>
+        </Card>
+
+        <Card title="Daily Dose">
+          <Text style={styles.body}>
+            Set today&apos;s quote or knowledge bite for the website banner.
+          </Text>
+          <TextInput
+            style={[styles.input, styles.textarea]}
+            value={dailyDose.text}
+            onChangeText={(value) => setDailyDose((current) => ({ ...current, text: value }))}
+            placeholder="Write today's Daily Dose"
+            placeholderTextColor="#8a989c"
+            multiline
+          />
+          <TextInput
+            style={styles.input}
+            value={dailyDose.author}
+            onChangeText={(value) => setDailyDose((current) => ({ ...current, author: value }))}
+            placeholder="Author or source (optional)"
+            placeholderTextColor="#8a989c"
+          />
+          <View style={styles.row}>
+            <Pressable style={[styles.chip, dailyDose.style === "scroll" ? styles.chipActive : null]} onPress={() => setDailyDose((current) => ({ ...current, style: "scroll" }))}>
+              <Text style={[styles.chipText, dailyDose.style === "scroll" ? styles.chipTextActive : null]}>Scrolling</Text>
+            </Pressable>
+            <Pressable style={[styles.chip, dailyDose.style === "flash" ? styles.chipActive : null]} onPress={() => setDailyDose((current) => ({ ...current, style: "flash" }))}>
+              <Text style={[styles.chipText, dailyDose.style === "flash" ? styles.chipTextActive : null]}>Flash</Text>
+            </Pressable>
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.label}>Show on website</Text>
+            <Switch value={dailyDose.active} onValueChange={(value) => setDailyDose((current) => ({ ...current, active: value }))} />
+          </View>
+          <View style={styles.previewCard}>
+            <Text style={styles.previewLabel}>Preview</Text>
+            <Text style={styles.previewText}>
+              {dailyDose.text.trim() || "Your Daily Dose will appear here."}
+              {dailyDose.author.trim() ? ` — ${dailyDose.author.trim()}` : ""}
+            </Text>
+          </View>
+          <Pressable style={styles.primaryButtonWide} onPress={() => void saveDose()} disabled={savingDose}>
+            <Text style={styles.primaryText}>{savingDose ? "Saving..." : "Save Daily Dose"}</Text>
+          </Pressable>
         </Card>
 
         <Card title="Search">
@@ -437,6 +519,9 @@ const styles = StyleSheet.create({
   chipText: { color: "#6f5c46", fontSize: 12, fontWeight: "800", textTransform: "capitalize" },
   chipTextActive: { color: "#fffef9" },
   card: { backgroundColor: "#f7efe4", borderRadius: 22, padding: 14, gap: 12 },
+  previewCard: { borderRadius: 18, borderWidth: 1, borderStyle: "dashed", borderColor: "#dcc6a5", backgroundColor: "#fffaf3", padding: 14, gap: 8 },
+  previewLabel: { color: "#1f6973", fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.8 },
+  previewText: { color: "#19313b", fontSize: 14, lineHeight: 20, fontWeight: "600" },
   thumb: { width: 64, height: 64, borderRadius: 16, backgroundColor: "#efe2cf" },
   thumbPlaceholder: { width: 64, height: 64, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: "#efe2cf" },
   flex: { flex: 1 },

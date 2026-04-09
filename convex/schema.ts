@@ -82,4 +82,14 @@ export default defineSchema({
     email: v.string(),
     createdAt: v.string(),
   }).index("by_email", ["email"]),
+
+  dailyDose: defineTable({
+    singletonKey: v.string(),
+    text: v.string(),
+    author: v.optional(v.string()),
+    active: v.boolean(),
+    style: v.union(v.literal("scroll"), v.literal("flash")),
+    updatedAt: v.string(),
+    updatedAtTs: v.number(),
+  }).index("by_singletonKey", ["singletonKey"]),
 });
