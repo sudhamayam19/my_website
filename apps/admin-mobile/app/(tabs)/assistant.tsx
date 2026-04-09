@@ -53,9 +53,25 @@ const MODEL_SIZE     = "3.4 GB";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function stripThinking(text: string) {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^\s+/, "").trim();
+  let cleaned = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+
+  if (/final output generation/i.test(cleaned)) {
+    cleaned = cleaned.replace(/^[\s\S]*?final output generation[^A-Za-z0-9]*/i, "");
+  }
+
+  if (/<\|channel\|>final/i.test(cleaned)) {
+    cleaned = cleaned.replace(/^[\s\S]*?<\|channel\|>final\s*/i, "");
+  }
+
+  cleaned = cleaned.replace(/<\|channel\|>\w+/gi, "");
+  cleaned = cleaned.replace(/^thinking process:\s*/i, "");
+
+  return cleaned.replace(/^\s+/, "").trim();
 }
 function isInsideThink(text: string) {
+  if (/<\|channel\|>thought/i.test(text) && !/<\|channel\|>final/i.test(text)) {
+    return true;
+  }
   return (text.match(/<think>/gi) ?? []).length > (text.match(/<\/think>/gi) ?? []).length;
 }
 
@@ -90,7 +106,9 @@ ${p}
 
 Help with: comment replies, blog posts, RJ scripts, translations (Telugu/Hindi/English), social captions, article ideas.
 When drafting a reply write: "REPLY TO COMMENT [number]: [reply text]"
-Be concise and warm. Match Sudha's conversational storytelling voice.`;
+Be concise and warm. Match Sudha's conversational storytelling voice.
+Never reveal chain-of-thought, analysis, thinking process, scratchpad, tool output, or channel tags.
+Respond with only the final answer for the user.`;
 }
 
 // ── animated dots ────────────────────────────────────────────────────────────
@@ -247,10 +265,13 @@ export default function AssistantTab() {
     KeepAwake.activateKeepAwakeAsync("ai-inference");
     try {
       let full = "";
-      await llamaRef.current.completion(
-        { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...next.map((m) => ({ role: m.role, content: m.content }))],
-          n_predict: 400, temperature: 0.72, top_p: 0.9, stop: ["<end_of_turn>", "<eos>"] },
-        (data) => {
+        await llamaRef.current.completion(
+          { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...next.map((m) => ({ role: m.role, content: m.content }))],
+          n_predict: 400,
+          temperature: 0.45,
+          top_p: 0.9,
+          stop: ["<end_of_turn>", "<eos>", "<think>", "<|channel|>thought", "Thinking Process:"] },
+          (data) => {
           if (data.token) {
             full += data.token;
             setThinking(isInsideThink(full));
@@ -259,11 +280,16 @@ export default function AssistantTab() {
         }
       );
       const clean = stripThinking(full);
+      const finalText =
+        clean ||
+        (/^(hi|hello|hey)\b/i.test(text)
+          ? "Hello there! How can I assist you today? Whether you need help with a script, a translation, or an idea, just let me know."
+          : "I am here to help. Please ask again in one short sentence.");
       const rMatch = /REPLY TO COMMENT\s+(\d+):/i.exec(clean);
       const commentId = rMatch ? siteCtx.pending[parseInt(rMatch[1]) - 1]?.id : undefined;
-      setMsgs((prev) => [...prev, { role: "assistant", content: clean, commentId }]);
+      setMsgs((prev) => [...prev, { role: "assistant", content: finalText, commentId }]);
       setPartial("");
-    } catch (e: unknown) {
+    } catch {
       // stopCompletion throws — that's expected, just show what was generated
       const clean = stripThinking(partial);
       if (clean.length > 0) {
