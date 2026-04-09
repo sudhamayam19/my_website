@@ -39,7 +39,11 @@
       "adaptiveIcon": {
         "foregroundImage": "../../image.png",
         "backgroundColor": "#f7efe4"
-      }
+      },
+      "permissions": [
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_DATA_SYNC"
+      ]
     },
     "ios": {
       "supportsTablet": true

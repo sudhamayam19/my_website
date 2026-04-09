@@ -55,49 +55,66 @@ const MODEL_PATH     = `${FileSystem.documentDirectory}${MODEL_FILENAME}`;
 const MODEL_SIZE     = "3.4 GB";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
-// Gemma 4 wraps thinking in <|channel|>thought ... <|channel|>
+// Gemma 4 uses <|channel>thought ... <|channel> (| after channel is optional)
 // Some models use <think>...</think> — handle both.
 function stripThinking(text: string) {
   let cleaned = text
-    .replace(/<\|channel\|>thought[\s\S]*?<\|channel\|>/gi, "")
-    .replace(/<think>[\s\S]*?<\/think>/gi, "");
+    .replace(/<\|channel\|?>thought[\s\S]*?<\|channel\|?>(?!thought)/gi, "") // complete Gemma 4 blocks
+    .replace(/<\|channel\|?>thought[\s\S]*/gi, "")                            // unclosed thinking blocks
+    .replace(/<think>[\s\S]*?<\/think>/gi, "");                               // classic think blocks
 
   if (/final output generation/i.test(cleaned)) {
     cleaned = cleaned.replace(/^[\s\S]*?final output generation[^A-Za-z0-9]*/i, "");
   }
-  if (/<\|channel\|>final/i.test(cleaned)) {
-    cleaned = cleaned.replace(/^[\s\S]*?<\|channel\|>final\s*/i, "");
+  if (/<\|channel\|?>final/i.test(cleaned)) {
+    cleaned = cleaned.replace(/^[\s\S]*?<\|channel\|?>final\s*/i, "");
   }
-  cleaned = cleaned.replace(/<\|channel\|>\w+/gi, "");
+  cleaned = cleaned.replace(/<\|channel\|?>\w+/gi, "");
   cleaned = cleaned.replace(/^thinking process:\s*/i, "");
 
   return cleaned.replace(/^\s+/, "").trim();
 }
 function isInsideThink(text: string) {
-  // Gemma-style: opened by <|channel|>thought, closed by next <|channel|>
-  const gemmaOpen  = (text.match(/<\|channel\|>thought/gi) ?? []).length;
-  const gemmaClose = (text.match(/<\|channel\|>/gi) ?? []).length - gemmaOpen;
-  if (gemmaOpen > 0) return gemmaClose < gemmaOpen;
+  // Gemma-style: <|channel>thought opens, <|channel> (not followed by "thought") closes
+  const opens  = (text.match(/<\|channel\|?>thought/gi) ?? []).length;
+  const closes = (text.match(/<\|channel\|?>(?!thought)/gi) ?? []).length;
+  if (opens > 0) return closes < opens;
   // Classic <think> style
   return (text.match(/<think>/gi) ?? []).length > (text.match(/<\/think>/gi) ?? []).length;
 }
 
 // ── background notification (keeps Android from killing the process) ─────────
-const NOTIF_ID = "ai-inference";
 const DONE_NOTIF_ID = "ai-done";
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: false }),
+  handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true }),
 });
+
+// ── foreground service (Android only) ────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let ForegroundService: any = null;
+if (Platform.OS === "android") {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    ForegroundService = require("@supersami/rn-foreground-service").default;
+  } catch { ForegroundService = null; }
+}
+
 async function showInferenceNotif() {
   await Notifications.requestPermissionsAsync();
-  await Notifications.scheduleNotificationAsync({
-    identifier: NOTIF_ID,
-    content: { title: "AI Assistant", body: "Generating response… You can switch apps.", sticky: true } as Notifications.NotificationContentInput,
-    trigger: null,
-  });
+  if (ForegroundService) {
+    await ForegroundService.start({
+      id: 1,
+      title: "AI Assistant",
+      message: "Generating response… You can switch apps.",
+      importance: 2,
+    });
+  }
 }
+
 async function hideInferenceNotif(done = false) {
-  await Notifications.dismissNotificationAsync(NOTIF_ID);
+  if (ForegroundService) {
+    await ForegroundService.stop();
+  }
   if (done) {
     await Notifications.scheduleNotificationAsync({
       identifier: DONE_NOTIF_ID,
