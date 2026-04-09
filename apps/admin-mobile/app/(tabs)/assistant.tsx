@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import * as KeepAwake from "expo-keep-awake";
@@ -231,9 +232,16 @@ export default function AssistantTab() {
   const llamaRef  = useRef<LlamaCtx | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  const HISTORY_KEY = "assistant_chat_history";
+
   useEffect(() => {
     void checkModel();
     void loadCtx();
+    void AsyncStorage.getItem(HISTORY_KEY).then((raw) => {
+      if (raw) {
+        try { setMsgs(JSON.parse(raw) as Msg[]); } catch { /* corrupt data */ }
+      }
+    });
     const s1 = SpeechRecognition.ExpoSpeechRecognitionModule.addListener("result", (e) => {
       if (e.results?.[0]?.transcript) setInput(e.results[0].transcript);
     });
@@ -241,6 +249,13 @@ export default function AssistantTab() {
     return () => { s1.remove(); s2.remove(); llamaRef.current?.release(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (msgs.length > 0) {
+      void AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(msgs));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgs]);
 
   const loadCtx = async () => {
     try {
@@ -373,10 +388,19 @@ export default function AssistantTab() {
     if (!res.canceled) setImgUri(res.assets[0].uri);
   };
 
+  const clearHistory = () => Alert.alert("Clear Chat", "Delete all conversation history?", [
+    { text: "Cancel", style: "cancel" },
+    { text: "Clear", style: "destructive", onPress: async () => {
+      await AsyncStorage.removeItem(HISTORY_KEY);
+      setMsgs([{ role: "assistant", content: "Namaste Sudha! 🙏 Ready to help — fully offline and private.\n\nTap a suggestion or speak your request!" }]);
+    }},
+  ]);
+
   const deleteModel = () => Alert.alert("Delete Model", `Free up ${MODEL_SIZE}?`, [
     { text: "Cancel", style: "cancel" },
     { text: "Delete", style: "destructive", onPress: async () => {
       await FileSystem.deleteAsync(MODEL_PATH, { idempotent: true });
+      await AsyncStorage.removeItem(HISTORY_KEY);
       llamaRef.current?.release(); llamaRef.current = null;
       setStatus("idle"); setMsgs([]);
     }},
@@ -460,6 +484,9 @@ export default function AssistantTab() {
         <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
           <Pressable onPress={() => void loadCtx()} hitSlop={12}>
             <Ionicons name="refresh-outline" size={20} color={C.teal} />
+          </Pressable>
+          <Pressable onPress={clearHistory} hitSlop={12}>
+            <Ionicons name="chatbubbles-outline" size={20} color={C.slate} />
           </Pressable>
           <Pressable onPress={deleteModel} hitSlop={12}>
             <Ionicons name="trash-outline" size={20} color={C.slateLight} />
