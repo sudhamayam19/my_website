@@ -29,9 +29,10 @@ const colors = {
 
 // Gemma 4 E2B Q4_K_M — ~1.3GB, best for 12GB RAM phones
 const MODEL_URL =
-  "https://huggingface.co/ggml-org/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf";
+  "https://huggingface.co/lmstudio-community/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf";
 const MODEL_FILENAME = "gemma-4-E2B-it-Q4_K_M.gguf";
 const MODEL_PATH = `${FileSystem.documentDirectory}${MODEL_FILENAME}`;
+const MODEL_SIZE_LABEL = "3.4 GB";
 
 const SYSTEM_PROMPT = `You are Sudha's personal AI assistant. Sudha Devarakonda is a professional RJ, Translator, and Voice Artist based in Hyderabad, India.
 
@@ -107,11 +108,22 @@ export default function AssistantTab() {
           setDownloadProgress(Math.round(pct));
         }
       );
-      await downloadResumable.downloadAsync();
+      const result = await downloadResumable.downloadAsync();
+      if (!result || result.status >= 400) {
+        throw new Error(
+          result
+            ? `Model server returned ${result.status}. Please try again in a little while.`
+            : "Model download did not start. Please try again."
+        );
+      }
       await loadModel();
-    } catch {
+    } catch (error) {
       setStatus("error");
-      Alert.alert("Download failed", "Please check your internet and try again.");
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Please check your internet and try again.";
+      Alert.alert("Download failed", message);
     }
   };
 
@@ -146,7 +158,7 @@ export default function AssistantTab() {
   };
 
   const deleteModel = () => {
-    Alert.alert("Delete Model", "This will delete the downloaded model (1.3GB). You'll need to re-download to use the assistant again.", [
+    Alert.alert("Delete Model", `This will delete the downloaded model (${MODEL_SIZE_LABEL}). You'll need to re-download to use the assistant again.`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -220,7 +232,7 @@ export default function AssistantTab() {
           No internet needed. No data sent anywhere. Free forever.
         </Text>
         <View style={styles.specRow}>
-          {["~1.3 GB", "Offline", "Private", "Free"].map((s) => (
+          {[MODEL_SIZE_LABEL, "Offline", "Private", "Free"].map((s) => (
             <View key={s} style={styles.specChip}>
               <Text style={styles.specText}>{s}</Text>
             </View>
