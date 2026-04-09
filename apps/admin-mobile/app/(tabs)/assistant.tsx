@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Markdown from "react-native-markdown-display";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import * as KeepAwake from "expo-keep-awake";
@@ -187,7 +188,10 @@ function Bubble({ msg, index, onPost, posting, onSpeak, speaking }: {
     ], alignItems: isUser ? "flex-end" : "flex-start" }}>
       <View style={[S.bubble, isUser ? S.userBubble : S.aiBubble]}>
         {msg.imageUri && <Image source={{ uri: msg.imageUri }} style={S.attachImg} resizeMode="cover" />}
-        <Text style={[S.bubbleText, isUser ? S.userText : S.aiText]}>{msg.content}</Text>
+        {isUser
+          ? <Text style={[S.bubbleText, S.userText]}>{msg.content}</Text>
+          : <Markdown style={mdStyle}>{msg.content}</Markdown>
+        }
       </View>
 
       {!isUser && (
@@ -312,9 +316,26 @@ export default function AssistantTab() {
     KeepAwake.activateKeepAwakeAsync("ai-inference");
     void showInferenceNotif();
     let full = "";
+
+    // Build multimodal content for the last user message if it has an image
+    const buildContent = async (m: Msg): Promise<string | { type: string; text?: string; image_url?: { url: string } }[]> => {
+      if (m.imageUri && m.role === "user") {
+        const b64 = await FileSystem.readAsStringAsync(m.imageUri, { encoding: FileSystem.EncodingType.Base64 });
+        const mime = m.imageUri.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+        return [
+          { type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } },
+          { type: "text", text: m.content },
+        ];
+      }
+      return m.content;
+    };
+
     try {
+      const builtMessages = await Promise.all(
+        next.slice(-5).map(async (m) => ({ role: m.role, content: await buildContent(m) }))
+      );
       await llamaRef.current.completion(
-        { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...next.slice(-5).map((m) => ({ role: m.role, content: m.content }))],
+        { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...builtMessages] as never,
           n_predict: 400,
           temperature: 0.45,
           top_p: 0.9,
@@ -525,7 +546,7 @@ export default function AssistantTab() {
         )}
         {running && !thinking && partial.length > 0 && (
           <View style={[S.bubble, S.aiBubble]}>
-            <Text style={[S.bubbleText, S.aiText]}>{partial}</Text>
+            <Markdown style={mdStyle}>{partial}</Markdown>
           </View>
         )}
         {running && !thinking && partial.length === 0 && <ThinkingDots />}
@@ -643,3 +664,17 @@ const S = StyleSheet.create({
   sendBtn:     { width: 44, height: 44, borderRadius: 22, backgroundColor: C.teal, alignItems: "center", justifyContent: "center" },
   sendOff:     { backgroundColor: C.sand },
 });
+
+const mdStyle = {
+  body:        { color: C.ink, fontSize: 14, lineHeight: 22 },
+  strong:      { fontWeight: "800" as const, color: C.ink },
+  em:          { fontStyle: "italic" as const },
+  bullet_list: { marginVertical: 4 },
+  ordered_list:{ marginVertical: 4 },
+  list_item:   { marginVertical: 2 },
+  code_inline: { backgroundColor: C.cream, borderRadius: 4, paddingHorizontal: 4, fontFamily: "monospace", fontSize: 12 },
+  code_block:  { backgroundColor: C.cream, borderRadius: 8, padding: 10, fontFamily: "monospace", fontSize: 12 },
+  heading1:    { fontSize: 18, fontWeight: "900" as const, color: C.ink, marginVertical: 6 },
+  heading2:    { fontSize: 16, fontWeight: "800" as const, color: C.ink, marginVertical: 4 },
+  paragraph:   { marginVertical: 2 },
+};
