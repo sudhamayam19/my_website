@@ -290,7 +290,8 @@ export default function AssistantTab() {
     try {
       llamaRef.current = await initLlama({ model: MODEL_PATH, use_mlock: true, n_ctx: 2048, n_threads: 4, n_gpu_layers: 0 });
       setStatus("ready");
-      setMsgs([{ role: "assistant", content: "Namaste Sudha! 🙏 Ready to help — fully offline and private.\n\nTap a suggestion or speak your request!" }]);
+      // Only set welcome if no saved history was loaded
+      setMsgs((prev) => prev.length > 0 ? prev : [{ role: "assistant", content: "Namaste Sudha! 🙏 Ready to help — fully offline and private.\n\nTap a suggestion or speak your request!" }]);
     } catch { setStatus("error"); Alert.alert("Load failed", "Restart the app and try again."); }
   };
 
@@ -313,7 +314,7 @@ export default function AssistantTab() {
     let full = "";
     try {
       await llamaRef.current.completion(
-        { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...next.map((m) => ({ role: m.role, content: m.content }))],
+        { messages: [{ role: "system" as const, content: buildPrompt(siteCtx) }, ...next.slice(-5).map((m) => ({ role: m.role, content: m.content }))],
           n_predict: 400,
           temperature: 0.45,
           top_p: 0.9,
@@ -388,11 +389,18 @@ export default function AssistantTab() {
     if (!res.canceled) setImgUri(res.assets[0].uri);
   };
 
+  const WELCOME: Msg = { role: "assistant", content: "Namaste Sudha! 🙏 Ready to help — fully offline and private.\n\nTap a suggestion or speak your request!" };
+
+  const newChat = async () => {
+    await AsyncStorage.removeItem(HISTORY_KEY);
+    setMsgs([WELCOME]);
+  };
+
   const clearHistory = () => Alert.alert("Clear Chat", "Delete all conversation history?", [
     { text: "Cancel", style: "cancel" },
     { text: "Clear", style: "destructive", onPress: async () => {
       await AsyncStorage.removeItem(HISTORY_KEY);
-      setMsgs([{ role: "assistant", content: "Namaste Sudha! 🙏 Ready to help — fully offline and private.\n\nTap a suggestion or speak your request!" }]);
+      setMsgs([WELCOME]);
     }},
   ]);
 
@@ -485,8 +493,8 @@ export default function AssistantTab() {
           <Pressable onPress={() => void loadCtx()} hitSlop={12}>
             <Ionicons name="refresh-outline" size={20} color={C.teal} />
           </Pressable>
-          <Pressable onPress={clearHistory} hitSlop={12}>
-            <Ionicons name="chatbubbles-outline" size={20} color={C.slate} />
+          <Pressable onPress={() => void newChat()} hitSlop={12}>
+            <Ionicons name="create-outline" size={20} color={C.teal} />
           </Pressable>
           <Pressable onPress={deleteModel} hitSlop={12}>
             <Ionicons name="trash-outline" size={20} color={C.slateLight} />
