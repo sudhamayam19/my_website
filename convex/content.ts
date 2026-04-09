@@ -1033,6 +1033,13 @@ export const addNewsletterSubscriber = mutationGeneric({
   },
 });
 
+export const getNewsletterSubscribers = queryGeneric({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("newsletterSubscribers").order("desc").collect();
+  },
+});
+
 export const seedDefaults = mutationGeneric({
   args: {
     posts: v.array(postInputValidator),

@@ -92,6 +92,9 @@ export function PodcastEditor({ mode, initialEpisode }: PodcastEditorProps) {
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [savedEpisodeId, setSavedEpisodeId] = useState(initialEpisode?.id ?? "");
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastFeedback, setBroadcastFeedback] = useState("");
 
   function updateField<K extends keyof PodcastFormState>(field: K, value: PodcastFormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -161,8 +164,11 @@ export function PodcastEditor({ mode, initialEpisode }: PodcastEditorProps) {
         throw new Error(data.error || "Unable to save episode.");
       }
 
+      const episodeId = data.episode?.id ?? initialEpisode?.id ?? "";
+      setSavedEpisodeId(episodeId);
+      setBroadcastFeedback("");
       setSuccess(mode === "edit" ? "Episode updated." : "Episode created.");
-      router.push("/admin");
+      if (mode === "create") { router.push("/admin"); }
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to save episode.");
@@ -371,10 +377,41 @@ export function PodcastEditor({ mode, initialEpisode }: PodcastEditorProps) {
           <button type="submit" disabled={isSaving || isUploadingAudio || isUploadingCover} className="editorial-btn-primary disabled:cursor-not-allowed disabled:opacity-60">
             {isSaving ? "Saving..." : mode === "edit" ? "Save episode" : "Create episode"}
           </button>
+          {form.status === "published" && savedEpisodeId && (
+            <button
+              type="button"
+              disabled={isBroadcasting}
+              onClick={async () => {
+                setIsBroadcasting(true);
+                setBroadcastFeedback("");
+                try {
+                  const link = `https://sudhamayam.vercel.app/podcasts/${savedEpisodeId}`;
+                  const res = await fetch("/api/newsletter/broadcast", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title: form.title, excerpt: form.excerpt, link, type: "podcast" }),
+                  });
+                  const data = (await res.json()) as { sent?: number; error?: string };
+                  if (!res.ok) throw new Error(data.error ?? "Broadcast failed");
+                  setBroadcastFeedback(`Sent to ${data.sent} subscriber${data.sent === 1 ? "" : "s"} ✓`);
+                } catch (e) {
+                  setBroadcastFeedback(e instanceof Error ? e.message : "Failed");
+                } finally {
+                  setIsBroadcasting(false);
+                }
+              }}
+              className="rounded-full border border-[#1f6973] px-6 py-3 text-sm font-semibold text-[#1f6973] transition hover:bg-[#1f6973] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isBroadcasting ? "Sending..." : "Notify Subscribers"}
+            </button>
+          )}
           <button type="button" onClick={() => router.push("/admin")} className="editorial-btn-secondary">
             Cancel
           </button>
         </div>
+        {broadcastFeedback ? (
+          <p className="text-sm font-medium text-emerald-600">{broadcastFeedback}</p>
+        ) : null}
       </form>
 
       <aside className="editorial-card space-y-5 p-6 sm:p-8">

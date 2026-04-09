@@ -133,6 +133,9 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const [feedback, setFeedback] = useState("");
   const [feedbackState, setFeedbackState] = useState<"idle" | "success" | "error">("idle");
   const [isSaving, setIsSaving] = useState(false);
+  const [savedPostId, setSavedPostId] = useState(initialPost?.id ?? "");
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastFeedback, setBroadcastFeedback] = useState("");
   const [hasHydratedDraft, setHasHydratedDraft] = useState(false);
   const [isUploadingCoverImage, setIsUploadingCoverImage] = useState(false);
   const [isUploadingArticleImage, setIsUploadingArticleImage] = useState(false);
@@ -616,6 +619,8 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       setFeedbackState("success");
       setFeedback(mode === "create" ? "Post created." : "Post updated.");
       setLastSavedSnapshot(editorSnapshot);
+      setSavedPostId(data.post.id);
+      setBroadcastFeedback("");
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(autosaveKey);
       }
@@ -629,6 +634,27 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
       setFeedback(error instanceof Error ? error.message : "Unable to save post.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleBroadcast = async () => {
+    if (!savedPostId) return;
+    setIsBroadcasting(true);
+    setBroadcastFeedback("");
+    try {
+      const link = `https://sudhamayam.vercel.app/blog/${savedPostId}`;
+      const res = await fetch("/api/newsletter/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim(), excerpt: excerpt.trim(), link, type: "article" }),
+      });
+      const data = (await res.json()) as { sent?: number; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Broadcast failed");
+      setBroadcastFeedback(`Sent to ${data.sent} subscriber${data.sent === 1 ? "" : "s"} ✓`);
+    } catch (e) {
+      setBroadcastFeedback(e instanceof Error ? e.message : "Failed to send");
+    } finally {
+      setIsBroadcasting(false);
     }
   };
 
@@ -909,14 +935,23 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
             >
               {isSaving ? "Saving..." : mode === "create" ? "Create Post" : "Save Changes"}
             </button>
-            {feedback ? (
-              <p
-                className={`text-sm font-medium ${
-                  feedbackState === "error" ? "text-red-600" : "text-emerald-600"
-                }`}
+            {status === "published" && savedPostId && !isDirty && (
+              <button
+                type="button"
+                onClick={() => void handleBroadcast()}
+                disabled={isBroadcasting}
+                className="rounded-full border border-[#1f6973] px-6 py-3 text-sm font-semibold text-[#1f6973] transition hover:bg-[#1f6973] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
+                {isBroadcasting ? "Sending..." : "Notify Subscribers"}
+              </button>
+            )}
+            {feedback ? (
+              <p className={`text-sm font-medium ${feedbackState === "error" ? "text-red-600" : "text-emerald-600"}`}>
                 {feedback}
               </p>
+            ) : null}
+            {broadcastFeedback ? (
+              <p className="text-sm font-medium text-emerald-600">{broadcastFeedback}</p>
             ) : null}
             {isDirty ? <p className="text-sm font-medium text-[#8a5a1d]">Unsaved changes</p> : null}
           </div>

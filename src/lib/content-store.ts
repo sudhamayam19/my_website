@@ -533,6 +533,11 @@ export async function addNewsletterSubscriber(email: string): Promise<{ alreadyS
   return await client.mutation(api.content.addNewsletterSubscriber, { email });
 }
 
+export async function getNewsletterSubscribers(): Promise<{ email: string; createdAt: string }[]> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.query(api.content.getNewsletterSubscribers, {});
+}
+
 export async function likeComment(id: string): Promise<number> {
   const client = ensureConvexForWrites(getConvexClient());
   const result = await client.mutation(api.content.likeComment, { id });
