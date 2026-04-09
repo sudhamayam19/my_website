@@ -82,8 +82,9 @@ function isInsideThink(text: string) {
 
 // ── background notification (keeps Android from killing the process) ─────────
 const NOTIF_ID = "ai-inference";
+const DONE_NOTIF_ID = "ai-done";
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({ shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false }),
+  handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: false }),
 });
 async function showInferenceNotif() {
   await Notifications.requestPermissionsAsync();
@@ -93,8 +94,15 @@ async function showInferenceNotif() {
     trigger: null,
   });
 }
-async function hideInferenceNotif() {
+async function hideInferenceNotif(done = false) {
   await Notifications.dismissNotificationAsync(NOTIF_ID);
+  if (done) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: DONE_NOTIF_ID,
+      content: { title: "AI Assistant", body: "Your response is ready! Tap to view." },
+      trigger: null,
+    });
+  }
 }
 
 // ── llama.rn lazy load ───────────────────────────────────────────────────────
@@ -273,7 +281,7 @@ export default function AssistantTab() {
 
   const stopGeneration = async () => {
     await llamaRef.current?.stopCompletion();
-    void hideInferenceNotif();
+    void hideInferenceNotif(false);
     setRunning(false);
     setThinking(false);
   };
@@ -323,7 +331,7 @@ export default function AssistantTab() {
     } finally {
       setRunning(false); setThinking(false);
       KeepAwake.deactivateKeepAwake("ai-inference");
-      void hideInferenceNotif();
+      void hideInferenceNotif(true);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
