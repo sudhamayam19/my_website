@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Upload, Image, CheckCircle2, Loader2, X } from "lucide-react";
 import { RichTextRenderer } from "@/components/RichTextRenderer";
 import type { BlogPost, PostStatus } from "@/lib/site-data";
 
@@ -109,6 +110,7 @@ async function uploadImageFile(file: File): Promise<string> {
 export function PostEditor({ mode, initialPost }: PostEditorProps) {
   const router = useRouter();
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
+  const coverImageInputRef = useRef<HTMLInputElement>(null);
   const articleImageInputRef = useRef<HTMLInputElement | null>(null);
   const articleImageSelectionRef = useRef({ start: 0, end: 0 });
   const [title, setTitle] = useState(initialPost?.title ?? "");
@@ -746,45 +748,78 @@ export function PostEditor({ mode, initialPost }: PostEditorProps) {
 
             <div className="block">
               <span className="mb-2 block text-sm font-medium text-[#304b57]">Cover Image</span>
-              <div className="rounded-2xl border border-dashed border-[#c8b397] bg-[#fffaf2] p-4">
+              <div
+                className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 transition-all ${
+                  isUploadingCoverImage
+                    ? "border-[#2a6670] bg-[#edf7f6]"
+                    : coverImageUrl
+                      ? "border-[#b7d2cf] bg-[#f8fcfb]"
+                      : "border-[#c8b397] bg-[#fffaf2] hover:border-[#b89772] hover:bg-[#f5eee3]"
+                }`}
+              >
                 <input
+                  ref={coverImageInputRef}
                   type="file"
                   accept="image/*"
                   onChange={handleCoverImageUpload}
-                  className="block w-full text-sm text-[#304b57] file:mr-4 file:rounded-full file:border-0 file:bg-[#215c66] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:opacity-95"
+                  className="hidden"
                 />
-                <p className="mt-2 text-xs text-[#5f6f79]">
-                  Upload JPG, PNG, WEBP, or another image format up to 4 MB.
-                </p>
+                
+                {isUploadingCoverImage ? (
+                  <div className="flex flex-col items-center space-y-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-[#2a6670]" />
+                    <span className="text-sm font-medium text-[#2a6670]">Uploading cover...</span>
+                  </div>
+                ) : coverImageUrl ? (
+                  <div className="flex flex-col items-center space-y-2 text-center">
+                    <div className="relative">
+                      <CheckCircle2 className="h-8 w-8 text-[#2a6670]" />
+                      <div className="absolute inset-0 animate-ping rounded-full bg-[#2a6670] opacity-20" />
+                    </div>
+                    <span className="text-sm font-medium text-[#2a6670]">Cover Selected</span>
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => coverImageInputRef.current?.click()}
+                        className="text-xs font-semibold text-[#304b57] underline underline-offset-4 hover:text-[#2a6670]"
+                      >
+                        Change image
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoverImage}
+                        className="text-xs font-semibold text-[#8b4034] underline underline-offset-4 hover:opacity-80"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => coverImageInputRef.current?.click()}
+                    className="group flex flex-col items-center space-y-2 text-center"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#c8b397] shadow-sm transition group-hover:scale-110 group-hover:bg-[#2a6670] group-hover:text-white">
+                      <Image className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <span className="block text-sm font-bold text-[#304b57]">Upload cover art</span>
+                      <span className="text-xs text-[#5f6f79]">JPG, PNG, or WEBP up to 4 MB</span>
+                    </div>
+                  </button>
+                )}
+              </div>
+              
+              {coverImageFeedback ? (
                 <p
-                  className={`mt-2 text-xs ${
-                    coverImageFeedbackState === "error"
-                      ? "text-red-600"
-                      : coverImageFeedbackState === "success"
-                        ? "text-emerald-600"
-                        : "text-[#5f6f79]"
+                  className={`mt-2 text-xs font-medium ${
+                    coverImageFeedbackState === "error" ? "text-red-600" : "text-emerald-600"
                   }`}
                 >
-                  {coverImageFeedback ||
-                    (isUploadingCoverImage
-                      ? "Uploading cover image..."
-                      : "This image appears at the top of the article card and post header.")}
+                  {coverImageFeedback}
                 </p>
-                {coverImageUrl ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <p className="text-xs text-[#5f6f79]">
-                      A cover image is selected and will be saved with this post.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleRemoveCoverImage}
-                      className="rounded-full border border-[#c8b397] bg-white px-3 py-1 text-xs font-semibold text-[#304b57] transition hover:bg-[#f5eee3]"
-                    >
-                      Remove image
-                    </button>
-                  </div>
-                ) : null}
-              </div>
+              ) : null}
             </div>
 
             <label className="block">

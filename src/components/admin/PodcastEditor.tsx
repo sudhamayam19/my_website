@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, useRef, type ChangeEvent, type FormEvent } from "react";
+import { Upload, Music, Image, CheckCircle2, Loader2 } from "lucide-react";
 import type { PodcastEpisode } from "@/lib/site-data";
 
 interface PodcastEditorProps {
@@ -81,6 +82,8 @@ async function uploadAsset(file: File) {
 
 export function PodcastEditor({ mode, initialEpisode }: PodcastEditorProps) {
   const router = useRouter();
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const inputClassName =
     "w-full rounded-2xl border border-[#d8c8b0] bg-[#fff9ef] px-4 py-3 text-sm text-[#1f2d39] outline-none transition focus:border-[#2a6670] focus:ring-2 focus:ring-[#c9e3e0]";
   const [form, setForm] = useState<PodcastFormState>(buildInitialState(initialEpisode));
@@ -220,30 +223,122 @@ export function PodcastEditor({ mode, initialEpisode }: PodcastEditorProps) {
           </label>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block space-y-2">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-3">
             <span className="text-sm font-semibold text-[#2f3f4e]">Cover image</span>
-            <input
-              type="file"
-              accept="image/*"
-              className="block w-full text-sm text-[#445963]"
-              onChange={(event) => void handleAssetUpload(event, "coverImageUrl")}
-            />
+            <div
+              className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 transition-all ${
+                isUploadingCover
+                  ? "border-[#2a6670] bg-[#edf7f6]"
+                  : form.coverImageUrl
+                    ? "border-[#b7d2cf] bg-[#f8fcfb]"
+                    : "border-[#d8c8b0] bg-[#fffcf5] hover:border-[#b89772] hover:bg-[#fbf4e7]"
+              }`}
+            >
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => void handleAssetUpload(event, "coverImageUrl")}
+              />
+              {isUploadingCover ? (
+                <div className="flex flex-col items-center space-y-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#2a6670]" />
+                  <span className="text-sm font-medium text-[#2a6670]">Uploading...</span>
+                </div>
+              ) : form.coverImageUrl ? (
+                <div className="flex flex-col items-center space-y-2 text-center">
+                  <div className="relative">
+                    <CheckCircle2 className="h-8 w-8 text-[#2a6670]" />
+                    <div className="absolute inset-0 animate-ping rounded-full bg-[#2a6670] opacity-20" />
+                  </div>
+                  <span className="text-sm font-medium text-[#2a6670]">Cover uploaded</span>
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    className="mt-1 text-xs font-semibold text-[#4e4231] underline underline-offset-4 hover:text-[#2a6670]"
+                  >
+                    Change image
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => coverInputRef.current?.click()}
+                  className="group flex flex-col items-center space-y-2 text-center"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#b89772] shadow-sm transition group-hover:scale-110 group-hover:bg-[#2a6670] group-hover:text-white">
+                    <Image className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span className="block text-sm font-bold text-[#1f2d39]">Choose image</span>
+                    <span className="text-xs text-[#60717b]">PNG, JPG, or WEBP</span>
+                  </div>
+                </button>
+              )}
+            </div>
             <input className={inputClassName} value={form.coverImageUrl} placeholder="Or paste a cover image URL" onChange={(event) => updateField("coverImageUrl", event.target.value)} />
-            <p className="text-xs text-[#60717b]">{isUploadingCover ? "Uploading cover..." : "Use square or wide artwork for best results."}</p>
-          </label>
+            <p className="text-xs text-[#60717b]">Use square or wide artwork for best results.</p>
+          </div>
 
-          <label className="block space-y-2">
+          <div className="space-y-3">
             <span className="text-sm font-semibold text-[#2f3f4e]">Episode audio</span>
-            <input
-              type="file"
-              accept="audio/*"
-              className="block w-full text-sm text-[#445963]"
-              onChange={(event) => void handleAssetUpload(event, "audioUrl")}
-            />
+            <div
+              className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 transition-all ${
+                isUploadingAudio
+                  ? "border-[#2a6670] bg-[#edf7f6]"
+                  : form.audioUrl
+                    ? "border-[#b7d2cf] bg-[#f8fcfb]"
+                    : "border-[#d8c8b0] bg-[#fffcf5] hover:border-[#b89772] hover:bg-[#fbf4e7]"
+              }`}
+            >
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept="audio/*"
+                className="hidden"
+                onChange={(event) => void handleAssetUpload(event, "audioUrl")}
+              />
+              {isUploadingAudio ? (
+                <div className="flex flex-col items-center space-y-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#2a6670]" />
+                  <span className="text-sm font-medium text-[#2a6670]">Uploading audio...</span>
+                </div>
+              ) : form.audioUrl ? (
+                <div className="flex flex-col items-center space-y-2 text-center">
+                  <div className="relative">
+                    <Music className="h-8 w-8 text-[#2a6670]" />
+                    <div className="absolute inset-x-[-4px] inset-y-[-4px] animate-pulse rounded-full border border-[#2a6670] opacity-40" />
+                  </div>
+                  <span className="text-sm font-medium text-[#2a6670]">Audio ready</span>
+                  <button
+                    type="button"
+                    onClick={() => audioInputRef.current?.click()}
+                    className="mt-1 text-xs font-semibold text-[#4e4231] underline underline-offset-4 hover:text-[#2a6670]"
+                  >
+                    Replace audio
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => audioInputRef.current?.click()}
+                  className="group flex flex-col items-center space-y-2 text-center"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#b89772] shadow-sm transition group-hover:scale-110 group-hover:bg-[#2a6670] group-hover:text-white">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <span className="block text-sm font-bold text-[#1f2d39]">Choose audio</span>
+                    <span className="text-xs text-[#60717b]">MP3 or M4A format</span>
+                  </div>
+                </button>
+              )}
+            </div>
             <input className={inputClassName} value={form.audioUrl} placeholder="Or paste an audio URL" onChange={(event) => updateField("audioUrl", event.target.value)} />
-            <p className="text-xs text-[#60717b]">{isUploadingAudio ? "Uploading audio..." : "MP3 or M4A works well for a clean listening page."}</p>
-          </label>
+            <p className="text-xs text-[#60717b]">MP3 or M4A works well for a clean listening page.</p>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
