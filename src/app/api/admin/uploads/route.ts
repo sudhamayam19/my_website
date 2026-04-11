@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       }
 
       const url = await client.query(api.content.getStorageUrl, {
-        storageId: storageId as any,
+        storageId: storageId as string,
       });
 
       if (!url) {
