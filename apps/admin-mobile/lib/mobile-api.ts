@@ -1,4 +1,6 @@
 import * as SecureStore from "expo-secure-store";
+import * as FileSystem from "expo-file-system";
+
 
 const TOKEN_KEY = "admin_mobile_token";
 const DEFAULT_API_BASE_URL = "https://sudhamayam.vercel.app";
@@ -258,19 +260,39 @@ export async function registerPushToken(token: string, platform: string): Promis
   });
 }
 
-export async function uploadFile(fileUri: string, fileName: string, mimeType: string): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", {
-    uri: fileUri,
-    name: fileName,
-    type: mimeType,
-  } as unknown as Blob);
-
-  const data = await apiRequest<{ url: string }>("/api/admin/uploads", {
-    method: "POST",
-    body: formData,
+export async function uploadFile(fileUri: string, _fileName: string, mimeType: string): Promise<string> {
+  // 1. Get the upload URL from the server (checking auth)
+  const { uploadUrl } = await apiRequest<{ uploadUrl: string }>("/api/admin/uploads?action=prepare", {
+    method: "GET",
   });
-  return data.url;
+
+  // 2. POST the file directly to Convex (bypassing Vercel's limits)
+  const uploadResponse = await FileSystem.uploadAsync(uploadUrl, fileUri, {
+    httpMethod: "POST",
+    uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    headers: {
+      "Content-Type": mimeType,
+    },
+  });
+
+  if (uploadResponse.status < 200 || uploadResponse.status >= 300) {
+    throw new Error("Direct upload to Convex failed.");
+  }
+
+  const uploadResult = JSON.parse(uploadResponse.body) as { storageId?: string };
+  if (!uploadResult.storageId) {
+    throw new Error("Upload succeeded but no storage ID was returned.");
+  }
+
+  // 3. Resolve the storageId to a public URL
+  const { url } = await apiRequest<{ url: string }>(
+    `/api/admin/uploads?action=resolve&storageId=${uploadResult.storageId}`,
+    {
+      method: "GET",
+    },
+  );
+
+  return url;
 }
 
 export async function uploadImage(
