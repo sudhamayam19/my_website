@@ -132,6 +132,8 @@ export default function PostsScreen() {
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [savingDose, setSavingDose] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
 
   const loadContent = () => {
     setLoading(true);
@@ -202,33 +204,49 @@ export default function PostsScreen() {
   };
 
   const uploadCover = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    const url = await uploadImage(asset.uri, asset.fileName ?? `cover-${Date.now()}.jpg`, asset.mimeType ?? "image/jpeg");
-    if (editorKind === "articles") {
-      setPostDraft((current) => ({ ...current, coverImageUrl: url }));
-    } else {
-      setPodcastDraft((current) => ({ ...current, coverImageUrl: url }));
+    setIsUploadingCover(true);
+    setFeedback("");
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const url = await uploadImage(asset.uri, asset.fileName ?? `cover-${Date.now()}.jpg`, asset.mimeType ?? "image/jpeg");
+      if (editorKind === "articles") {
+        setPostDraft((current) => ({ ...current, coverImageUrl: url }));
+      } else {
+        setPodcastDraft((current) => ({ ...current, coverImageUrl: url }));
+      }
+      setFeedback("Cover uploaded.");
+    } catch (reason) {
+      setFeedback(reason instanceof Error ? reason.message : "Cover upload failed.");
+    } finally {
+      setIsUploadingCover(false);
     }
-    setFeedback("Cover uploaded.");
   };
 
   const uploadEpisodeAudio = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: "audio/*",
-      copyToCacheDirectory: true,
-      multiple: false,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    const url = await uploadFile(
-      asset.uri,
-      asset.name ?? `episode-${Date.now()}.mp3`,
-      asset.mimeType ?? "audio/mpeg",
-    );
-    setPodcastDraft((current) => ({ ...current, audioUrl: url }));
-    setFeedback("Audio uploaded.");
+    setIsUploadingAudio(true);
+    setFeedback("");
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "audio/*",
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const url = await uploadFile(
+        asset.uri,
+        asset.name ?? `episode-${Date.now()}.mp3`,
+        asset.mimeType ?? "audio/mpeg",
+      );
+      setPodcastDraft((current) => ({ ...current, audioUrl: url }));
+      setFeedback("Audio uploaded.");
+    } catch (reason) {
+      setFeedback(reason instanceof Error ? reason.message : "Audio upload failed.");
+    } finally {
+      setIsUploadingAudio(false);
+    }
   };
 
   const saveDose = async () => {
@@ -450,7 +468,27 @@ export default function PostsScreen() {
                   </View>
                   <TextInput style={styles.input} placeholder="SEO description" value={postDraft.seoDescription} onChangeText={(value) => setPostDraft((current) => ({ ...current, seoDescription: value }))} />
                   <View style={styles.switchRow}><Text style={styles.label}>Featured</Text><Switch value={postDraft.featured} onValueChange={(value) => setPostDraft((current) => ({ ...current, featured: value }))} /></View>
-                  <Pressable style={styles.secondaryButton} onPress={() => void uploadCover()}><Text style={styles.secondaryText}>Upload Cover</Text></Pressable>
+                  <View style={styles.spacer} />
+                  <Text style={styles.label}>Cover Image</Text>
+                  <Pressable 
+                    style={[styles.uploadCard, isUploadingCover ? styles.uploadCardActive : null]} 
+                    onPress={() => void uploadCover()}
+                    disabled={isUploadingCover}
+                  >
+                    {isUploadingCover ? (
+                      <ActivityIndicator color="#1f6973" />
+                    ) : postDraft.coverImageUrl ? (
+                      <View style={styles.uploadCardSuccess}>
+                        <Ionicons name="checkmark-circle" size={24} color="#1f6973" />
+                        <Text style={styles.uploadCardTextActive}>Cover ready</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.uploadCardIdle}>
+                        <Ionicons name="image-outline" size={28} color="#8a989c" />
+                        <Text style={styles.uploadCardText}>Pick cover image</Text>
+                      </View>
+                    )}
+                  </Pressable>
                 </Card>
                 <Card title="Preview"><PostPreview post={previewPost} /></Card>
               </>
@@ -470,9 +508,48 @@ export default function PostsScreen() {
                   <TextInput style={styles.input} placeholder="SEO description" value={podcastDraft.seoDescription} onChangeText={(value) => setPodcastDraft((current) => ({ ...current, seoDescription: value }))} />
                   <TextInput style={styles.input} placeholder="Audio URL" value={podcastDraft.audioUrl} onChangeText={(value) => setPodcastDraft((current) => ({ ...current, audioUrl: value }))} />
                   <View style={styles.switchRow}><Text style={styles.label}>Featured</Text><Switch value={podcastDraft.featured} onValueChange={(value) => setPodcastDraft((current) => ({ ...current, featured: value }))} /></View>
+                  
+                  <View style={styles.spacer} />
                   <View style={styles.row}>
-                    <Pressable style={styles.secondaryButton} onPress={() => void uploadCover()}><Text style={styles.secondaryText}>Upload Cover</Text></Pressable>
-                    <Pressable style={styles.secondaryButton} onPress={() => void uploadEpisodeAudio()}><Text style={styles.secondaryText}>Upload Audio</Text></Pressable>
+                    <View style={styles.flex}>
+                      <Text style={styles.label}>Cover</Text>
+                      <Pressable 
+                        style={[styles.uploadCard, isUploadingCover ? styles.uploadCardActive : null]} 
+                        onPress={() => void uploadCover()}
+                        disabled={isUploadingCover}
+                      >
+                        {isUploadingCover ? (
+                          <ActivityIndicator color="#1f6973" />
+                        ) : podcastDraft.coverImageUrl ? (
+                          <Ionicons name="checkmark-circle" size={24} color="#1f6973" />
+                        ) : (
+                          <Ionicons name="image-outline" size={28} color="#8a989c" />
+                        )}
+                        <Text style={[styles.uploadCardTextTiny, (isUploadingCover || podcastDraft.coverImageUrl) ? styles.uploadCardTextActive : null]}>
+                          {isUploadingCover ? "Uploading..." : podcastDraft.coverImageUrl ? "Done" : "Pick Cover"}
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.flex}>
+                      <Text style={styles.label}>Audio</Text>
+                      <Pressable 
+                        style={[styles.uploadCard, isUploadingAudio ? styles.uploadCardActive : null]} 
+                        onPress={() => void uploadEpisodeAudio()}
+                        disabled={isUploadingAudio}
+                      >
+                        {isUploadingAudio ? (
+                          <ActivityIndicator color="#1f6973" />
+                        ) : podcastDraft.audioUrl ? (
+                          <Ionicons name="checkmark-circle" size={24} color="#1f6973" />
+                        ) : (
+                          <Ionicons name="mic-outline" size={28} color="#8a989c" />
+                        )}
+                        <Text style={[styles.uploadCardTextTiny, (isUploadingAudio || podcastDraft.audioUrl) ? styles.uploadCardTextActive : null]}>
+                          {isUploadingAudio ? "Uploading..." : podcastDraft.audioUrl ? "Done" : "Pick Audio"}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
                 </Card>
               </>
@@ -529,4 +606,43 @@ const styles = StyleSheet.create({
   heading: { color: "#19313b", fontSize: 26, fontWeight: "900" },
   body: { color: "#61747d", fontSize: 13, lineHeight: 18, marginTop: 4 },
   feedback: { color: "#42555d", fontSize: 14, backgroundColor: "#fffaf3", borderWidth: 1, borderColor: "#dcc6a5", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 },
+  spacer: { height: 8 },
+  uploadCard: {
+    height: 100,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: "#dcc6a5",
+    backgroundColor: "#fffaf3",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    gap: 6,
+  },
+  uploadCardActive: {
+    backgroundColor: "#ecf4f5",
+    borderColor: "#1f6973",
+  },
+  uploadCardIdle: {
+    alignItems: "center",
+  },
+  uploadCardSuccess: {
+    alignItems: "center",
+    gap: 4,
+  },
+  uploadCardText: {
+    color: "#5e7178",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  uploadCardTextTiny: {
+    color: "#5e7178",
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  uploadCardTextActive: {
+    color: "#1f6973",
+    fontWeight: "800",
+  },
 });
