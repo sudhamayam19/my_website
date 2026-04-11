@@ -67,20 +67,43 @@ function scrubLegacyInlineImages(value: string): string {
 }
 
 async function uploadImageFile(file: File): Promise<string> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch("/api/admin/uploads", {
-    method: "POST",
-    body: formData,
-  });
-
-  const data = (await response.json()) as { url?: string; error?: string } | undefined;
-  if (!response.ok || !data?.url) {
-    throw new Error(data?.error || "Unable to upload image.");
+  // 1. Get the upload URL from the server (checking auth)
+  const prepareResponse = await fetch("/api/admin/uploads?action=prepare");
+  const { uploadUrl, error: prepareError } = (await prepareResponse.json()) as {
+    uploadUrl?: string;
+    error?: string;
+  };
+  if (!prepareResponse.ok || !uploadUrl) {
+    throw new Error(prepareError || "Failed to prepare upload.");
   }
 
-  return data.url;
+  // 2. POST the file directly to Convex (bypassing Vercel's limits)
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Direct upload to Convex failed.");
+  }
+
+  const { storageId } = (await uploadResponse.json()) as { storageId?: string };
+  if (!storageId) {
+    throw new Error("Upload succeeded but no storage ID was returned.");
+  }
+
+  // 3. Resolve the storageId to a public URL
+  const resolveResponse = await fetch(`/api/admin/uploads?action=resolve&storageId=${storageId}`);
+  const { url, error: resolveError } = (await resolveResponse.json()) as {
+    url?: string;
+    error?: string;
+  };
+  if (!resolveResponse.ok || !url) {
+    throw new Error(resolveError || "Failed to resolve file URL.");
+  }
+
+  return url;
 }
 
 export function PostEditor({ mode, initialPost }: PostEditorProps) {

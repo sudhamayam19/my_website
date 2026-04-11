@@ -15,7 +15,53 @@ function getConvexClient() {
   return new ConvexHttpClient(deploymentUrl);
 }
 
+export async function GET(request: Request) {
+  const isAdmin = await isAdminRequest(request);
+  if (!isAdmin) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get("action");
+
+  try {
+    const client = getConvexClient();
+
+    if (action === "prepare") {
+      const uploadUrl = await client.mutation(api.content.generateUploadUrl, {});
+      return NextResponse.json({ uploadUrl });
+    }
+
+    if (action === "resolve") {
+      const storageId = searchParams.get("storageId");
+      if (!storageId) {
+        return NextResponse.json({ error: "storageId is required." }, { status: 400 });
+      }
+
+      const url = await client.query(api.content.getStorageUrl, {
+        storageId: storageId as any,
+      });
+
+      if (!url) {
+        return NextResponse.json({ error: "URL could not be generated." }, { status: 404 });
+      }
+
+      return NextResponse.json({ url });
+    }
+
+    return NextResponse.json({ error: "Invalid action." }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Unable to process request.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
 export async function POST(request: Request) {
+
   const isAdmin = await isAdminRequest(request);
   if (!isAdmin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
