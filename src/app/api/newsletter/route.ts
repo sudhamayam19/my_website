@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     if (!result.alreadySubscribed && process.env.RESEND_API_KEY) {
       // Fire and forget — don't block the response
-      void sendWelcomeEmail(email).catch(() => null);
+      void sendWelcomeEmail(email).catch((e) => console.error("[newsletter] welcome email failed:", e));
     }
 
     return NextResponse.json(result);

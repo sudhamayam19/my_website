@@ -1,6 +1,9 @@
 import { Resend } from "resend";
 
-const FROM = process.env.RESEND_FROM ?? "Sudha Devarakonda <onboarding@resend.dev>";
+const FROM =
+  process.env.RESEND_FROM ??
+  process.env.COMMENT_NOTIFICATION_FROM ??
+  "onboarding@resend.dev";
 const SITE = "https://sudhamayam.vercel.app";
 
 function getResend() {
