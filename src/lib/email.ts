@@ -57,33 +57,39 @@ export async function sendBroadcast({
   const label = type === "article" ? "Read the full article" : "Listen to the episode";
   const icon = type === "article" ? "📝" : "🎙️";
 
-  // Resend supports batch sending (up to 100 per call)
+  // Send in batches of 100 using Promise.allSettled so one failure doesn't kill the rest
   const batches: string[][] = [];
   for (let i = 0; i < to.length; i += 100) batches.push(to.slice(i, i + 100));
 
   for (const batch of batches) {
-    await resend.batch.send(
-      batch.map((email) => ({
-        from: FROM,
-        to: email,
-        subject,
-        html: `
-          <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#fffaf3;color:#19313b">
-            <p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1f6973;margin:0 0 16px">
-              ${icon} New ${type === "article" ? "Article" : "Podcast"} from Sudha
-            </p>
-            <h1 style="font-size:24px;font-weight:900;margin:0 0 12px">${title}</h1>
-            <p style="font-size:15px;line-height:1.7;color:#4d5c66">${excerpt}</p>
-            <a href="${link}" style="display:inline-block;margin-top:24px;padding:12px 28px;background:#1f6973;color:#fff;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">
-              ${label} →
-            </a>
-            <p style="margin-top:32px;font-size:12px;color:#8fa3ad">
-              You subscribed at <a href="${SITE}" style="color:#1f6973">${SITE}</a>.
-              Reply to unsubscribe.
-            </p>
-          </div>
-        `,
-      }))
+    const results = await Promise.allSettled(
+      batch.map((email) =>
+        resend.emails.send({
+          from: FROM,
+          to: email,
+          subject,
+          html: `
+            <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#fffaf3;color:#19313b">
+              <p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#1f6973;margin:0 0 16px">
+                ${icon} New ${type === "article" ? "Article" : "Podcast"} from Sudha
+              </p>
+              <h1 style="font-size:24px;font-weight:900;margin:0 0 12px">${title}</h1>
+              <p style="font-size:15px;line-height:1.7;color:#4d5c66">${excerpt}</p>
+              <a href="${link}" style="display:inline-block;margin-top:24px;padding:12px 28px;background:#1f6973;color:#fff;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">
+                ${label} →
+              </a>
+              <p style="margin-top:32px;font-size:12px;color:#8fa3ad">
+                You subscribed at <a href="${SITE}" style="color:#1f6973">${SITE}</a>.
+                Reply to unsubscribe.
+              </p>
+            </div>
+          `,
+        })
+      )
     );
+    const failures = results.filter((r) => r.status === "rejected");
+    if (failures.length > 0) {
+      console.error(`Broadcast: ${failures.length}/${batch.length} emails failed`);
+    }
   }
 }
