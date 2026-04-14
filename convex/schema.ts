@@ -92,4 +92,13 @@ export default defineSchema({
     updatedAt: v.string(),
     updatedAtTs: v.number(),
   }).index("by_singletonKey", ["singletonKey"]),
+
+  scheduledDoses: defineTable({
+    date: v.string(),           // YYYY-MM-DD
+    text: v.string(),
+    author: v.optional(v.string()),
+    style: v.union(v.literal("scroll"), v.literal("flash")),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_date", ["date"]),
 });

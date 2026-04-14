@@ -432,6 +432,20 @@ export async function getDailyDose(): Promise<DailyDose> {
   }
 
   try {
+    // Check if there's a scheduled dose for today (IST = UTC+5:30)
+    const nowMs = Date.now() + 5.5 * 60 * 60 * 1000;
+    const today = new Date(nowMs).toISOString().slice(0, 10);
+    const scheduled = await client.query(api.content.getScheduledDoseForDate, { date: today });
+    if (scheduled) {
+      return {
+        id: scheduled.id,
+        text: scheduled.text,
+        author: scheduled.author,
+        active: true,
+        style: scheduled.style,
+        updatedAt: scheduled.updatedAt,
+      };
+    }
     const dose = await client.query(api.content.getDailyDose, {});
     return dose ?? getFallbackDailyDose();
   } catch {
@@ -526,6 +540,37 @@ export async function addComment(input: {
 export async function saveDailyDose(input: DailyDoseInput): Promise<DailyDose> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.saveDailyDose, { input });
+}
+
+export interface ScheduledDose {
+  id: string;
+  date: string;
+  text: string;
+  author?: string;
+  style: DailyDoseStyle;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getScheduledDoses(): Promise<ScheduledDose[]> {
+  const client = getConvexClient();
+  if (!client) return [];
+  return await client.query(api.content.getScheduledDoses, {});
+}
+
+export async function upsertScheduledDose(input: {
+  date: string;
+  text: string;
+  author?: string;
+  style: DailyDoseStyle;
+}): Promise<{ id: string }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.upsertScheduledDose, input);
+}
+
+export async function deleteScheduledDose(date: string): Promise<void> {
+  const client = ensureConvexForWrites(getConvexClient());
+  await client.mutation(api.content.deleteScheduledDose, { date });
 }
 
 export async function addNewsletterSubscriber(email: string): Promise<{ alreadySubscribed: boolean }> {

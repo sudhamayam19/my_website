@@ -1131,3 +1131,91 @@ export const seedDefaults = mutationGeneric({
     };
   },
 });
+
+// ── Scheduled Doses ───────────────────────────────────────────────────────────
+
+export const getScheduledDoses = queryGeneric({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("scheduledDoses").withIndex("by_date").collect();
+    return rows.map((r) => ({
+      id: String(r._id),
+      date: r.date,
+      text: r.text,
+      author: r.author,
+      style: r.style,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+  },
+});
+
+export const getScheduledDoseForDate = queryGeneric({
+  args: { date: v.string() },
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("scheduledDoses")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .first();
+    if (!row) return null;
+    return {
+      id: String(row._id),
+      date: row.date,
+      text: row.text,
+      author: row.author,
+      style: row.style,
+      active: true,
+      updatedAt: row.updatedAt,
+    };
+  },
+});
+
+export const upsertScheduledDose = mutationGeneric({
+  args: {
+    date: v.string(),
+    text: v.string(),
+    author: v.optional(v.string()),
+    style: dailyDoseStyleValidator,
+  },
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    const existing = await ctx.db
+      .query("scheduledDoses")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        text: args.text,
+        author: args.author,
+        style: args.style,
+        updatedAt: now,
+      });
+      return { id: String(existing._id) };
+    }
+
+    const id = await ctx.db.insert("scheduledDoses", {
+      date: args.date,
+      text: args.text,
+      author: args.author,
+      style: args.style,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return { id: String(id) };
+  },
+});
+
+export const deleteScheduledDose = mutationGeneric({
+  args: { date: v.string() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("scheduledDoses")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+    return { ok: true };
+  },
+});
