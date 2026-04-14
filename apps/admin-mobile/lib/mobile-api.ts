@@ -196,6 +196,41 @@ export async function saveDailyDose(input: {
   return data.dose;
 }
 
+export interface ScheduledDose {
+  id: string;
+  date: string;
+  text: string;
+  author?: string;
+  style: "scroll" | "flash";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function fetchScheduledDoses(): Promise<ScheduledDose[]> {
+  const data = await apiRequest<{ doses: ScheduledDose[] }>("/api/mobile/daily-dose/schedule", {
+    method: "GET",
+  });
+  return data.doses;
+}
+
+export async function saveScheduledDose(input: {
+  date: string;
+  text: string;
+  author?: string;
+  style: "scroll" | "flash";
+}): Promise<{ id: string }> {
+  return await apiRequest<{ id: string }>("/api/mobile/daily-dose/schedule", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteScheduledDose(date: string): Promise<void> {
+  await apiRequest<{ ok: boolean }>(`/api/mobile/daily-dose/schedule?date=${date}`, {
+    method: "DELETE",
+  });
+}
+
 export async function deletePost(id: string): Promise<void> {
   await apiRequest<{ post: { id: string } }>(`/api/mobile/posts/${id}`, {
     method: "DELETE",

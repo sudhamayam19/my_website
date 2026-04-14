@@ -22,17 +22,21 @@ import { AdminScreen, Card, Pill } from "@/components/screen";
 import {
   deletePodcastEpisode,
   deletePost,
+  deleteScheduledDose,
   fetchDailyDose,
   fetchPodcastEpisodes,
   fetchPosts,
+  fetchScheduledDoses,
   saveDailyDose,
   savePodcastEpisode,
   savePost,
+  saveScheduledDose,
   uploadFile,
   uploadImage,
   type MobileDailyDose,
   type MobilePodcastEpisode,
   type MobilePost,
+  type ScheduledDose,
 } from "@/lib/mobile-api";
 
 const SITE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || "https://sudhamayam.vercel.app").replace(/\/$/, "");
@@ -132,6 +136,13 @@ export default function PostsScreen() {
   const [error, setError] = useState("");
   const [feedback, setFeedback] = useState("");
   const [savingDose, setSavingDose] = useState(false);
+  const [doseTab, setDoseTab] = useState<"today" | "schedule">("today");
+  const [schedule, setSchedule] = useState<ScheduledDose[]>([]);
+  const [scheduleLoaded, setScheduleLoaded] = useState(false);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+  const [scheduleDraft, setScheduleDraft] = useState({ text: "", author: "", style: "scroll" as "scroll" | "flash" });
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [deletingDate, setDeletingDate] = useState<string | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
 
@@ -249,6 +260,87 @@ export default function PostsScreen() {
     }
   };
 
+  // ── helpers ──────────────────────────────────────────────────────────────
+  const next10Days = (): string[] => {
+    const days: string[] = [];
+    for (let i = 0; i < 10; i++) {
+      const ms = Date.now() + 5.5 * 60 * 60 * 1000 + i * 86400_000;
+      days.push(new Date(ms).toISOString().slice(0, 10));
+    }
+    return days;
+  };
+
+  const todayIST = () => {
+    const ms = Date.now() + 5.5 * 60 * 60 * 1000;
+    return new Date(ms).toISOString().slice(0, 10);
+  };
+
+  const formatDay = (date: string) => {
+    const d = new Date(date + "T00:00:00Z");
+    const day = d.toLocaleDateString("en-IN", { weekday: "short", timeZone: "UTC" });
+    const num = d.getUTCDate();
+    const mon = d.toLocaleDateString("en-IN", { month: "short", timeZone: "UTC" });
+    return { day, num, mon };
+  };
+
+  const loadSchedule = async () => {
+    try {
+      const doses = await fetchScheduledDoses();
+      setSchedule(doses);
+    } catch { /* silent */ }
+    setScheduleLoaded(true);
+  };
+
+  const openEdit = (date: string, existing: ScheduledDose | undefined) => {
+    setEditingDate(date);
+    setScheduleDraft({
+      text: existing?.text ?? "",
+      author: existing?.author ?? "",
+      style: existing?.style ?? "scroll",
+    });
+  };
+
+  const cancelEdit = () => setEditingDate(null);
+
+  const saveScheduleDay = async () => {
+    if (!editingDate || !scheduleDraft.text.trim()) return;
+    setSavingSchedule(true);
+    try {
+      const result = await saveScheduledDose({
+        date: editingDate,
+        text: scheduleDraft.text.trim(),
+        author: scheduleDraft.author.trim() || undefined,
+        style: scheduleDraft.style,
+      });
+      setSchedule((prev) => {
+        const without = prev.filter((d) => d.date !== editingDate);
+        return [...without, {
+          id: result.id,
+          date: editingDate,
+          text: scheduleDraft.text.trim(),
+          author: scheduleDraft.author.trim() || undefined,
+          style: scheduleDraft.style,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }].sort((a, b) => a.date.localeCompare(b.date));
+      });
+      setEditingDate(null);
+    } catch (reason) {
+      setFeedback(reason instanceof Error ? reason.message : "Save failed.");
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const removeScheduleDay = async (date: string) => {
+    setDeletingDate(date);
+    try {
+      await deleteScheduledDose(date);
+      setSchedule((prev) => prev.filter((d) => d.date !== date));
+    } catch { /* silent */ }
+    setDeletingDate(null);
+  };
+
   const saveDose = async () => {
     setSavingDose(true);
     setFeedback("");
@@ -360,46 +452,166 @@ export default function PostsScreen() {
         </Card>
 
         <Card title="Daily Dose">
-          <Text style={styles.body}>
-            Set today&apos;s quote or knowledge bite for the website banner.
-          </Text>
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            value={dailyDose.text}
-            onChangeText={(value) => setDailyDose((current) => ({ ...current, text: value }))}
-            placeholder="Write today's Daily Dose"
-            placeholderTextColor="#8a989c"
-            multiline
-          />
-          <TextInput
-            style={styles.input}
-            value={dailyDose.author}
-            onChangeText={(value) => setDailyDose((current) => ({ ...current, author: value }))}
-            placeholder="Author or source (optional)"
-            placeholderTextColor="#8a989c"
-          />
-          <View style={styles.row}>
-            <Pressable style={[styles.chip, dailyDose.style === "scroll" ? styles.chipActive : null]} onPress={() => setDailyDose((current) => ({ ...current, style: "scroll" }))}>
-              <Text style={[styles.chipText, dailyDose.style === "scroll" ? styles.chipTextActive : null]}>Scrolling</Text>
+          {/* Tab toggle */}
+          <View style={styles.doseTabRow}>
+            <Pressable
+              style={[styles.doseTab, doseTab === "today" ? styles.doseTabActive : null]}
+              onPress={() => setDoseTab("today")}
+            >
+              <Text style={[styles.doseTabText, doseTab === "today" ? styles.doseTabTextActive : null]}>Today</Text>
             </Pressable>
-            <Pressable style={[styles.chip, dailyDose.style === "flash" ? styles.chipActive : null]} onPress={() => setDailyDose((current) => ({ ...current, style: "flash" }))}>
-              <Text style={[styles.chipText, dailyDose.style === "flash" ? styles.chipTextActive : null]}>Flash</Text>
+            <Pressable
+              style={[styles.doseTab, doseTab === "schedule" ? styles.doseTabActive : null]}
+              onPress={() => {
+                setDoseTab("schedule");
+                if (!scheduleLoaded) void loadSchedule();
+              }}
+            >
+              <Text style={[styles.doseTabText, doseTab === "schedule" ? styles.doseTabTextActive : null]}>10-Day Schedule</Text>
             </Pressable>
           </View>
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>Show on website</Text>
-            <Switch value={dailyDose.active} onValueChange={(value) => setDailyDose((current) => ({ ...current, active: value }))} />
-          </View>
-          <View style={styles.previewCard}>
-            <Text style={styles.previewLabel}>Preview</Text>
-            <Text style={styles.previewText}>
-              {dailyDose.text.trim() || "Your Daily Dose will appear here."}
-              {dailyDose.author.trim() ? ` — ${dailyDose.author.trim()}` : ""}
-            </Text>
-          </View>
-          <Pressable style={styles.primaryButtonWide} onPress={() => void saveDose()} disabled={savingDose}>
-            <Text style={styles.primaryText}>{savingDose ? "Saving..." : "Save Daily Dose"}</Text>
-          </Pressable>
+
+          {doseTab === "today" && (
+            <>
+              <Text style={styles.body}>Set today's quote or knowledge bite for the website banner.</Text>
+              <TextInput
+                style={[styles.input, styles.textarea]}
+                value={dailyDose.text}
+                onChangeText={(value) => setDailyDose((current) => ({ ...current, text: value }))}
+                placeholder="Write today's Daily Dose"
+                placeholderTextColor="#8a989c"
+                multiline
+              />
+              <TextInput
+                style={styles.input}
+                value={dailyDose.author}
+                onChangeText={(value) => setDailyDose((current) => ({ ...current, author: value }))}
+                placeholder="Author or source (optional)"
+                placeholderTextColor="#8a989c"
+              />
+              <View style={styles.row}>
+                <Pressable style={[styles.chip, dailyDose.style === "scroll" ? styles.chipActive : null]} onPress={() => setDailyDose((current) => ({ ...current, style: "scroll" }))}>
+                  <Text style={[styles.chipText, dailyDose.style === "scroll" ? styles.chipTextActive : null]}>Scrolling</Text>
+                </Pressable>
+                <Pressable style={[styles.chip, dailyDose.style === "flash" ? styles.chipActive : null]} onPress={() => setDailyDose((current) => ({ ...current, style: "flash" }))}>
+                  <Text style={[styles.chipText, dailyDose.style === "flash" ? styles.chipTextActive : null]}>Flash</Text>
+                </Pressable>
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.label}>Show on website</Text>
+                <Switch value={dailyDose.active} onValueChange={(value) => setDailyDose((current) => ({ ...current, active: value }))} />
+              </View>
+              <View style={styles.previewCard}>
+                <Text style={styles.previewLabel}>Preview</Text>
+                <Text style={styles.previewText}>
+                  {dailyDose.text.trim() || "Your Daily Dose will appear here."}
+                  {dailyDose.author.trim() ? ` — ${dailyDose.author.trim()}` : ""}
+                </Text>
+              </View>
+              <Pressable style={styles.primaryButtonWide} onPress={() => void saveDose()} disabled={savingDose}>
+                <Text style={styles.primaryText}>{savingDose ? "Saving..." : "Save Daily Dose"}</Text>
+              </Pressable>
+            </>
+          )}
+
+          {doseTab === "schedule" && (
+            <>
+              <Text style={styles.body}>Scheduled doses go live automatically at midnight IST. Tap a day to add or edit.</Text>
+              {!scheduleLoaded ? (
+                <View style={styles.center}><ActivityIndicator color="#1f6973" /></View>
+              ) : (
+                next10Days().map((date) => {
+                  const existing = schedule.find((d) => d.date === date);
+                  const { day, num, mon } = formatDay(date);
+                  const isToday = date === todayIST();
+                  const isEditing = editingDate === date;
+
+                  return (
+                    <View key={date} style={[styles.dayRow, isToday ? styles.dayRowToday : null]}>
+                      {/* Date badge */}
+                      <View style={styles.dateBadge}>
+                        <Text style={[styles.dateBadgeDay, isToday ? styles.dateBadgeDayToday : null]}>{isToday ? "Today" : day}</Text>
+                        <Text style={[styles.dateBadgeNum, isToday ? styles.dateBadgeNumToday : null]}>{num}</Text>
+                        <Text style={styles.dateBadgeMon}>{mon}</Text>
+                      </View>
+
+                      <View style={styles.flex}>
+                        {!isEditing ? (
+                          <>
+                            {existing ? (
+                              <Text style={styles.dayPreview} numberOfLines={2}>{existing.text}</Text>
+                            ) : (
+                              <Text style={styles.dayEmpty}>No dose scheduled</Text>
+                            )}
+                            <View style={[styles.row, { marginTop: 6 }]}>
+                              <Pressable
+                                style={styles.dayEditBtn}
+                                onPress={() => openEdit(date, existing)}
+                              >
+                                <Text style={styles.dayEditBtnText}>{existing ? "Edit" : "+ Add"}</Text>
+                              </Pressable>
+                              {existing && (
+                                <Pressable
+                                  style={styles.dayDeleteBtn}
+                                  onPress={() => void removeScheduleDay(date)}
+                                  disabled={deletingDate === date}
+                                >
+                                  {deletingDate === date
+                                    ? <ActivityIndicator size="small" color="#c0a080" />
+                                    : <Ionicons name="trash-outline" size={14} color="#c0a080" />
+                                  }
+                                </Pressable>
+                              )}
+                            </View>
+                          </>
+                        ) : (
+                          <View style={{ gap: 8 }}>
+                            <TextInput
+                              style={[styles.input, styles.textarea, { minHeight: 72 }]}
+                              value={scheduleDraft.text}
+                              onChangeText={(v) => setScheduleDraft((p) => ({ ...p, text: v }))}
+                              placeholder="Write the daily dose…"
+                              placeholderTextColor="#8a989c"
+                              multiline
+                              autoFocus
+                            />
+                            <TextInput
+                              style={styles.input}
+                              value={scheduleDraft.author}
+                              onChangeText={(v) => setScheduleDraft((p) => ({ ...p, author: v }))}
+                              placeholder="Author (optional)"
+                              placeholderTextColor="#8a989c"
+                            />
+                            <View style={styles.row}>
+                              {(["scroll", "flash"] as const).map((s) => (
+                                <Pressable
+                                  key={s}
+                                  style={[styles.chip, scheduleDraft.style === s ? styles.chipActive : null]}
+                                  onPress={() => setScheduleDraft((p) => ({ ...p, style: s }))}
+                                >
+                                  <Text style={[styles.chipText, scheduleDraft.style === s ? styles.chipTextActive : null]}>
+                                    {s === "scroll" ? "Scrolling" : "Flash"}
+                                  </Text>
+                                </Pressable>
+                              ))}
+                            </View>
+                            <View style={styles.row}>
+                              <Pressable style={[styles.primaryButtonWide, { paddingVertical: 10 }]} onPress={() => void saveScheduleDay()} disabled={savingSchedule}>
+                                <Text style={styles.primaryText}>{savingSchedule ? "Saving…" : "Save"}</Text>
+                              </Pressable>
+                              <Pressable style={[styles.secondaryButton, { paddingVertical: 10 }]} onPress={cancelEdit}>
+                                <Text style={styles.secondaryText}>Cancel</Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </>
+          )}
         </Card>
 
         <Card title="Search">
@@ -645,4 +857,23 @@ const styles = StyleSheet.create({
     color: "#1f6973",
     fontWeight: "800",
   },
+  // Daily dose schedule styles
+  doseTabRow: { flexDirection: "row", backgroundColor: "#f0e9dc", borderRadius: 14, padding: 3, gap: 3 },
+  doseTab: { flex: 1, borderRadius: 11, paddingVertical: 9, alignItems: "center" },
+  doseTabActive: { backgroundColor: "#ffffff" },
+  doseTabText: { fontSize: 12, fontWeight: "700", color: "#8a7060" },
+  doseTabTextActive: { color: "#1f2d39" },
+  dayRow: { flexDirection: "row", gap: 12, alignItems: "flex-start", borderRadius: 16, borderWidth: 1, borderColor: "#e0d4c0", backgroundColor: "#fffaf3", padding: 12 },
+  dayRowToday: { borderColor: "#1f6973", backgroundColor: "#f0f8f8" },
+  dateBadge: { alignItems: "center", minWidth: 38 },
+  dateBadgeDay: { fontSize: 10, fontWeight: "800", color: "#8fa3ad", textTransform: "uppercase" },
+  dateBadgeDayToday: { color: "#1f6973" },
+  dateBadgeNum: { fontSize: 22, fontWeight: "900", color: "#1f2d39", lineHeight: 26 },
+  dateBadgeNumToday: { color: "#1f6973" },
+  dateBadgeMon: { fontSize: 10, color: "#8fa3ad" },
+  dayPreview: { fontSize: 13, color: "#1f2d39", fontWeight: "600", lineHeight: 18 },
+  dayEmpty: { fontSize: 13, color: "#b0a090", fontStyle: "italic" },
+  dayEditBtn: { borderRadius: 20, backgroundColor: "#1f6973", paddingHorizontal: 12, paddingVertical: 6 },
+  dayEditBtnText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  dayDeleteBtn: { borderRadius: 20, borderWidth: 1, borderColor: "#e0d4c0", backgroundColor: "#faf4eb", width: 30, height: 30, alignItems: "center", justifyContent: "center" },
 });
