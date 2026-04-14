@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const episodes = await getPodcastEpisodes({ includeDrafts: true });
+    const episodes = await getPodcastEpisodes(true);
     return NextResponse.json({ episodes });
   } catch (error) {
     return NextResponse.json(

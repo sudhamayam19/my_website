@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const posts = await getBlogPosts({ includeDrafts: true });
+    const posts = await getBlogPosts(true);
     return NextResponse.json({ posts });
   } catch (error) {
     return NextResponse.json(

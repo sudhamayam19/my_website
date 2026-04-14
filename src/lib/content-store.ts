@@ -1,4 +1,5 @@
 import { ConvexHttpClient } from "convex/browser";
+import { unstable_cache } from "next/cache";
 import { anyApi } from "convex/server";
 import {
   defaultDailyDose,
@@ -154,170 +155,143 @@ async function tryEnsureSeeded(client: ConvexHttpClient): Promise<boolean> {
   }
 }
 
-export async function getBlogPosts(options?: {
-  includeDrafts?: boolean;
-}): Promise<BlogPost[]> {
-  const client = getConvexClient();
-  if (!client) {
-    return getFallbackPosts(options);
-  }
+// ── cached read functions ─────────────────────────────────────────────────────
+// unstable_cache de-duplicates identical Convex queries across all visitors
+// within the revalidation window, dramatically cutting function-call usage.
 
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return getFallbackPosts(options);
-  }
-
-  try {
-    return await client.query(api.content.listPosts, {
-      includeDrafts: options?.includeDrafts ?? false,
-    });
-  } catch {
-    return getFallbackPosts(options);
-  }
-}
-
-export async function getFeaturedPosts(limit = 3): Promise<BlogPost[]> {
-  const client = getConvexClient();
-  if (!client) {
-    return getFallbackPosts().filter((post) => post.featured).slice(0, limit);
-  }
-
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return getFallbackPosts().filter((post) => post.featured).slice(0, limit);
-  }
-
-  try {
-    return await client.query(api.content.listFeaturedPosts, { limit });
-  } catch {
-    return getFallbackPosts().filter((post) => post.featured).slice(0, limit);
-  }
-}
-
-export async function getPodcastEpisodes(options?: {
-  includeDrafts?: boolean;
-}): Promise<PodcastEpisode[]> {
-  const client = getConvexClient();
-  if (!client) {
-    return getFallbackPodcastEpisodes(options);
-  }
-
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return getFallbackPodcastEpisodes(options);
-  }
-
-  try {
-    return await client.query(api.content.listPodcastEpisodes, {
-      includeDrafts: options?.includeDrafts ?? false,
-    });
-  } catch {
-    return getFallbackPodcastEpisodes(options);
-  }
-}
-
-export async function getFeaturedPodcastEpisodes(limit = 3): Promise<PodcastEpisode[]> {
-  const client = getConvexClient();
-  if (!client) {
-    return getFallbackPodcastEpisodes().filter((episode) => episode.featured).slice(0, limit);
-  }
-
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return getFallbackPodcastEpisodes().filter((episode) => episode.featured).slice(0, limit);
-  }
-
-  try {
-    return await client.query(api.content.listFeaturedPodcastEpisodes, { limit });
-  } catch {
-    return getFallbackPodcastEpisodes().filter((episode) => episode.featured).slice(0, limit);
-  }
-}
-
-export async function getBlogPostById(id: string): Promise<BlogPost | undefined> {
-  const client = getConvexClient();
-  if (!client) {
-    return defaultBlogPosts.find((post) => post.id === id);
-  }
-
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return defaultBlogPosts.find((post) => post.id === id);
-  }
-
-  try {
-    const post = await client.query(api.content.getPostById, { id });
-    return post ?? undefined;
-  } catch {
-    return defaultBlogPosts.find((post) => post.id === id);
-  }
-}
-
-export async function getPodcastEpisodeById(id: string): Promise<PodcastEpisode | undefined> {
-  const client = getConvexClient();
-  if (!client) {
-    return defaultPodcastEpisodes.find((episode) => episode.id === id);
-  }
-
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return defaultPodcastEpisodes.find((episode) => episode.id === id);
-  }
-
-  try {
-    const episode = await client.query(api.content.getPodcastEpisodeById, { id });
-    return episode ?? undefined;
-  } catch {
-    return defaultPodcastEpisodes.find((episode) => episode.id === id);
-  }
-}
-
-export async function getBlogCategories(): Promise<string[]> {
-  const client = getConvexClient();
-  if (!client) {
-    return Array.from(new Set(getFallbackPosts().map((post) => post.category)));
-  }
-
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return Array.from(new Set(getFallbackPosts().map((post) => post.category)));
-  }
-
-  try {
-    return await client.query(api.content.listCategories, {});
-  } catch {
-    return Array.from(new Set(getFallbackPosts().map((post) => post.category)));
-  }
-}
-
-export async function getCommentsByPostId(
-  postId: string,
-  options?: {
-    includeStatuses?: CommentStatus[];
+export const getBlogPosts = unstable_cache(
+  async (includeDrafts = false): Promise<BlogPost[]> => {
+    const client = getConvexClient();
+    if (!client) return getFallbackPosts({ includeDrafts });
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return getFallbackPosts({ includeDrafts });
+    try {
+      return await client.query(api.content.listPosts, { includeDrafts });
+    } catch {
+      return getFallbackPosts({ includeDrafts });
+    }
   },
-): Promise<BlogComment[]> {
-  const client = getConvexClient();
-  const includeStatuses = options?.includeStatuses ?? ["approved"];
-  const filterFallback = (comments: BlogComment[]) =>
-    includeStatuses?.length
-      ? comments.filter((comment) => includeStatuses.includes(comment.status))
-      : comments;
+  ["blog-posts"],
+  { revalidate: 60 },
+);
 
-  if (!client) {
-    return filterFallback(getFallbackComments(postId));
-  }
+export const getFeaturedPosts = unstable_cache(
+  async (limit = 3): Promise<BlogPost[]> => {
+    const client = getConvexClient();
+    if (!client) return getFallbackPosts().filter((p) => p.featured).slice(0, limit);
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return getFallbackPosts().filter((p) => p.featured).slice(0, limit);
+    try {
+      return await client.query(api.content.listFeaturedPosts, { limit });
+    } catch {
+      return getFallbackPosts().filter((p) => p.featured).slice(0, limit);
+    }
+  },
+  ["featured-posts"],
+  { revalidate: 60 },
+);
 
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return filterFallback(getFallbackComments(postId));
-  }
+export const getPodcastEpisodes = unstable_cache(
+  async (includeDrafts = false): Promise<PodcastEpisode[]> => {
+    const client = getConvexClient();
+    if (!client) return getFallbackPodcastEpisodes({ includeDrafts });
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return getFallbackPodcastEpisodes({ includeDrafts });
+    try {
+      return await client.query(api.content.listPodcastEpisodes, { includeDrafts });
+    } catch {
+      return getFallbackPodcastEpisodes({ includeDrafts });
+    }
+  },
+  ["podcast-episodes"],
+  { revalidate: 60 },
+);
 
-  try {
-    return await client.query(api.content.listCommentsByPostId, { postId, includeStatuses });
-  } catch {
-    return filterFallback(getFallbackComments(postId));
-  }
-}
+export const getFeaturedPodcastEpisodes = unstable_cache(
+  async (limit = 3): Promise<PodcastEpisode[]> => {
+    const client = getConvexClient();
+    if (!client) return getFallbackPodcastEpisodes().filter((e) => e.featured).slice(0, limit);
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return getFallbackPodcastEpisodes().filter((e) => e.featured).slice(0, limit);
+    try {
+      return await client.query(api.content.listFeaturedPodcastEpisodes, { limit });
+    } catch {
+      return getFallbackPodcastEpisodes().filter((e) => e.featured).slice(0, limit);
+    }
+  },
+  ["featured-podcast-episodes"],
+  { revalidate: 60 },
+);
+
+export const getBlogPostById = unstable_cache(
+  async (id: string): Promise<BlogPost | undefined> => {
+    const client = getConvexClient();
+    if (!client) return defaultBlogPosts.find((p) => p.id === id);
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return defaultBlogPosts.find((p) => p.id === id);
+    try {
+      const post = await client.query(api.content.getPostById, { id });
+      return post ?? undefined;
+    } catch {
+      return defaultBlogPosts.find((p) => p.id === id);
+    }
+  },
+  ["blog-post"],
+  { revalidate: 120 },
+);
+
+export const getPodcastEpisodeById = unstable_cache(
+  async (id: string): Promise<PodcastEpisode | undefined> => {
+    const client = getConvexClient();
+    if (!client) return defaultPodcastEpisodes.find((e) => e.id === id);
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return defaultPodcastEpisodes.find((e) => e.id === id);
+    try {
+      const episode = await client.query(api.content.getPodcastEpisodeById, { id });
+      return episode ?? undefined;
+    } catch {
+      return defaultPodcastEpisodes.find((e) => e.id === id);
+    }
+  },
+  ["podcast-episode"],
+  { revalidate: 120 },
+);
+
+export const getBlogCategories = unstable_cache(
+  async (): Promise<string[]> => {
+    const client = getConvexClient();
+    if (!client) return Array.from(new Set(getFallbackPosts().map((p) => p.category)));
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return Array.from(new Set(getFallbackPosts().map((p) => p.category)));
+    try {
+      return await client.query(api.content.listCategories, {});
+    } catch {
+      return Array.from(new Set(getFallbackPosts().map((p) => p.category)));
+    }
+  },
+  ["blog-categories"],
+  { revalidate: 300 },
+);
+
+export const getCommentsByPostId = unstable_cache(
+  async (postId: string, includeStatuses: CommentStatus[] = ["approved"]): Promise<BlogComment[]> => {
+    const client = getConvexClient();
+    const filterFallback = (comments: BlogComment[]) =>
+      includeStatuses.length
+        ? comments.filter((c) => includeStatuses.includes(c.status))
+        : comments;
+    if (!client) return filterFallback(getFallbackComments(postId));
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return filterFallback(getFallbackComments(postId));
+    try {
+      return await client.query(api.content.listCommentsByPostId, { postId, includeStatuses });
+    } catch {
+      return filterFallback(getFallbackComments(postId));
+    }
+  },
+  ["comments-by-post"],
+  { revalidate: 30 },
+);
 
 export async function getAdminStats(): Promise<BlogStats> {
   const client = getConvexClient();
@@ -420,38 +394,36 @@ export async function incrementPodcastListen(id: string): Promise<number> {
   }
 }
 
-export async function getDailyDose(): Promise<DailyDose> {
-  const client = getConvexClient();
-  if (!client) {
-    return getFallbackDailyDose();
-  }
-
-  const isReady = await tryEnsureSeeded(client);
-  if (!isReady) {
-    return getFallbackDailyDose();
-  }
-
-  try {
-    // Check if there's a scheduled dose for today (IST = UTC+5:30)
-    const nowMs = Date.now() + 5.5 * 60 * 60 * 1000;
-    const today = new Date(nowMs).toISOString().slice(0, 10);
-    const scheduled = await client.query(api.content.getScheduledDoseForDate, { date: today });
-    if (scheduled) {
-      return {
-        id: scheduled.id,
-        text: scheduled.text,
-        author: scheduled.author,
-        active: true,
-        style: scheduled.style,
-        updatedAt: scheduled.updatedAt,
-      };
+export const getDailyDose = unstable_cache(
+  async (): Promise<DailyDose> => {
+    const client = getConvexClient();
+    if (!client) return getFallbackDailyDose();
+    const isReady = await tryEnsureSeeded(client);
+    if (!isReady) return getFallbackDailyDose();
+    try {
+      // Check if there's a scheduled dose for today (IST = UTC+5:30)
+      const nowMs = Date.now() + 5.5 * 60 * 60 * 1000;
+      const today = new Date(nowMs).toISOString().slice(0, 10);
+      const scheduled = await client.query(api.content.getScheduledDoseForDate, { date: today });
+      if (scheduled) {
+        return {
+          id: scheduled.id,
+          text: scheduled.text,
+          author: scheduled.author,
+          active: true,
+          style: scheduled.style,
+          updatedAt: scheduled.updatedAt,
+        };
+      }
+      const dose = await client.query(api.content.getDailyDose, {});
+      return dose ?? getFallbackDailyDose();
+    } catch {
+      return getFallbackDailyDose();
     }
-    const dose = await client.query(api.content.getDailyDose, {});
-    return dose ?? getFallbackDailyDose();
-  } catch {
-    return getFallbackDailyDose();
-  }
-}
+  },
+  ["daily-dose"],
+  { revalidate: 60 },
+);
 
 export async function createPost(input: PostInput): Promise<{ id: string }> {
   const client = ensureConvexForWrites(getConvexClient());

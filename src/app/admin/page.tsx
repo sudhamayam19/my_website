@@ -30,8 +30,8 @@ export default async function AdminDashboardPage() {
   await requireAdmin("/admin");
   const stats = await getAdminStats();
   const [posts, episodes, comments, topPosts, dailyDose] = await Promise.all([
-    getBlogPosts({ includeDrafts: true }),
-    getPodcastEpisodes({ includeDrafts: true }),
+    getBlogPosts(true),
+    getPodcastEpisodes(true),
     getRecentComments(12),
     getTopPostsByViews(5),
     getDailyDose(),

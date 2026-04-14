@@ -23,12 +23,10 @@ export interface MobileDashboardData {
 const ADMIN_COMMENT_STATUSES: CommentStatus[] = ["pending", "approved", "hidden", "spam"];
 
 export async function getRecentComments(limit = 20): Promise<AdminCommentFeedItem[]> {
-  const posts = await getBlogPosts({ includeDrafts: true });
+  const posts = await getBlogPosts(true);
   const commentsByPost = await Promise.all(
     posts.map(async (post) => {
-      const comments = await getCommentsByPostId(post.id, {
-        includeStatuses: ADMIN_COMMENT_STATUSES,
-      });
+      const comments = await getCommentsByPostId(post.id, ADMIN_COMMENT_STATUSES);
       return comments.map((comment) => ({
         ...comment,
         postTitle: post.title,
@@ -45,7 +43,7 @@ export async function getRecentComments(limit = 20): Promise<AdminCommentFeedIte
 export async function getMobileDashboardData(): Promise<MobileDashboardData> {
   const [stats, posts, recentComments, topPosts] = await Promise.all([
     getAdminStats(),
-    getBlogPosts({ includeDrafts: true }),
+    getBlogPosts(true),
     getRecentComments(8),
     getTopPostsByViews(5),
   ]);
