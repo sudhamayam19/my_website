@@ -35,8 +35,8 @@ export default async function HomePage() {
                 A crafted voice across radio, podcasts, and language.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-[#4f5f69]">
-                A design-forward website powered by Convex for persistent content,
-                comments, and newsletter subscriptions.
+                Discover original writing, podcast episodes, reflections on voice and translation,
+                and thoughtful stories from Sudha Devarakonda&apos;s work across audio and language.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="/blog" className="editorial-btn-primary">
@@ -58,17 +58,17 @@ export default async function HomePage() {
                 Current focus
               </p>
               <h2 className="display-font mt-3 text-3xl font-bold text-[#1f2d39]">
-                Building a durable media archive
+                Publishing useful stories and lasting audio work
               </h2>
               <ul className="mt-6 space-y-4 text-sm text-[#445963]">
                 <li className="rounded-xl border border-[#d8c8b0] bg-[#fbf4e7] p-4">
-                  Structured post metadata and reusable page blocks.
+                  Honest articles on voice work, language, media, and creative practice.
                 </li>
                 <li className="rounded-xl border border-[#d8c8b0] bg-[#fbf4e7] p-4">
-                  Admin drafting and editing with persistent publishing.
+                  Podcast episodes listeners can play directly on the site.
                 </li>
                 <li className="rounded-xl border border-[#d8c8b0] bg-[#fbf4e7] p-4">
-                  Comment section and newsletter saved in Convex.
+                  A growing archive built to be easy to explore and worth returning to.
                 </li>
               </ul>
             </aside>
@@ -85,7 +85,7 @@ export default async function HomePage() {
                 A voice career in milestones
               </h2>
               <p className="mt-3 text-[#4f5f69]">
-                Placeholder image frames are intentionally designed and can be replaced with real photos later.
+                Key moments across radio, voice work, translation, and podcast storytelling.
               </p>
             </div>
 

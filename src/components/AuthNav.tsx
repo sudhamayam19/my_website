@@ -11,7 +11,10 @@ interface NavOptions {
 export async function getHomeNav(options?: NavOptions): Promise<NavItem[]> {
   const showAdmin = await isAdminAuthenticated();
 
-  const items: NavItem[] = [{ label: "Home", href: "/" }];
+  const items: NavItem[] = [
+    { label: "Home", href: "/" },
+    { label: "About", href: "/about" },
+  ];
   if (options?.includeJourney) {
     items.push({ label: "Journey", href: "/#journey" });
   }
@@ -24,6 +27,7 @@ export async function getHomeNav(options?: NavOptions): Promise<NavItem[]> {
   if (options?.includePodcasts ?? true) {
     items.push({ label: "Podcasts", href: "/podcasts" });
   }
+  items.push({ label: "Contact", href: "/contact" });
   if (showAdmin) {
     items.push({ label: "Admin", href: "/admin" });
   }
