@@ -31,7 +31,14 @@ export default async function PodcastEpisodePage({ params }: Props) {
 
   if (!episode || episode.status !== "published") notFound();
 
-  const related = allEpisodes.filter((e) => e.id !== episode.id && e.status === "published").slice(0, 4);
+  const published = allEpisodes.filter((e) => e.status === "published");
+  // Sort by date ascending so index reflects chronological order
+  const sorted = [...published].sort((a, b) => a.publishedAt.localeCompare(b.publishedAt));
+  const idx = sorted.findIndex((e) => e.id === episode.id);
+  const prevEp = idx > 0 ? sorted[idx - 1] : null;
+  const nextEp = idx < sorted.length - 1 ? sorted[idx + 1] : null;
+
+  const related = published.filter((e) => e.id !== episode.id).slice(0, 4);
 
   return (
     <div className="page-shell">
@@ -46,7 +53,6 @@ export default async function PodcastEpisodePage({ params }: Props) {
             : `linear-gradient(135deg, #1a3a42 0%, #0f1e26 60%, #2a1a0e 100%)`,
         }}
       >
-        {/* Blurred background from cover art */}
         {episode.coverImageUrl && (
           <div
             className="absolute inset-0 scale-110 opacity-25 blur-2xl"
@@ -103,6 +109,41 @@ export default async function PodcastEpisodePage({ params }: Props) {
               </div>
             </div>
           </div>
+
+          {/* Prev / Next navigation */}
+          {(prevEp ?? nextEp) && (
+            <div className="mt-10 flex items-center justify-between gap-4 border-t border-white/10 pt-8">
+              {prevEp ? (
+                <Link
+                  href={`/podcasts/${prevEp.id}`}
+                  className="group flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3 transition hover:bg-white/10 max-w-[45%]"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-white/40">
+                    <polyline points="15 18 9 12 15 6"/>
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Previous</p>
+                    <p className="mt-0.5 text-sm font-semibold text-white/70 line-clamp-1 group-hover:text-white transition-colors">{prevEp.title}</p>
+                  </div>
+                </Link>
+              ) : <div />}
+
+              {nextEp ? (
+                <Link
+                  href={`/podcasts/${nextEp.id}`}
+                  className="group flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3 transition hover:bg-white/10 max-w-[45%] text-right"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/30">Next</p>
+                    <p className="mt-0.5 text-sm font-semibold text-white/70 line-clamp-1 group-hover:text-white transition-colors">{nextEp.title}</p>
+                  </div>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-white/40">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </Link>
+              ) : <div />}
+            </div>
+          )}
         </div>
       </div>
 
@@ -110,12 +151,17 @@ export default async function PodcastEpisodePage({ params }: Props) {
       <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
 
-          {/* Description */}
-          <div className="editorial-card p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#2a6670] mb-5">About this episode</p>
-            <p className="whitespace-pre-line text-base leading-relaxed text-[#344854]">
-              {episode.description || episode.excerpt}
-            </p>
+          {/* Description + Support */}
+          <div className="space-y-6">
+            <div className="editorial-card p-8">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#2a6670] mb-5">About this episode</p>
+              <p className="whitespace-pre-line text-base leading-relaxed text-[#344854]">
+                {episode.description || episode.excerpt}
+              </p>
+            </div>
+
+            {/* Support card */}
+            <SupportCard />
           </div>
 
           {/* More episodes */}
@@ -148,11 +194,64 @@ export default async function PodcastEpisodePage({ params }: Props) {
                 More episodes coming soon.
               </p>
             )}
+
+            {/* RSS badge */}
+            <a
+              href="/api/podcast/feed.xml"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl border border-[#d8c8b0] bg-[#fffaf3] px-4 py-3 text-sm font-semibold text-[#2a6670] transition hover:shadow-md"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C4.98 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/>
+              </svg>
+              Subscribe via RSS
+            </a>
           </aside>
         </div>
       </main>
 
       <SiteFooter />
+    </div>
+  );
+}
+
+function SupportCard() {
+  const upiId = process.env.NEXT_PUBLIC_UPI_ID ?? "sudha@upi";
+  const upiLink = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=Sudha%20Devarakonda&cu=INR`;
+
+  return (
+    <div className="rounded-2xl border border-[#d89a55]/40 bg-gradient-to-br from-[#fff9ef] to-[#fffaf3] p-6">
+      <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#d89a55]/15 text-xl">
+          🙏
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-[#1f2d39]">Enjoy the podcast?</p>
+          <p className="mt-1 text-sm text-[#50616d] leading-relaxed">
+            Sudha has been creating content for 4 years. Your support helps keep the episodes coming — every contribution matters.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a
+              href={upiLink}
+              className="inline-flex items-center gap-2 rounded-full bg-[#1f6973] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#185860]"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+              </svg>
+              Support via UPI
+            </a>
+            <a
+              href="https://buymeacoffee.com/sudha"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full border border-[#d8c8b0] bg-white px-5 py-2.5 text-sm font-bold text-[#1f2d39] transition hover:bg-[#fff9ef]"
+            >
+              ☕ Buy me a coffee
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

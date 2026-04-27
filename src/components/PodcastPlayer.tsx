@@ -16,6 +16,17 @@ function fmt(s: number) {
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
+function getFingerprint(): string {
+  if (typeof window === "undefined") return "";
+  const key = "pod_fp";
+  let fp = localStorage.getItem(key);
+  if (!fp) {
+    fp = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(key, fp);
+  }
+  return fp;
+}
+
 export function PodcastPlayer({ episodeId, audioUrl }: PodcastPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -25,9 +36,24 @@ export function PodcastPlayer({ episodeId, audioUrl }: PodcastPlayerProps) {
   const [tracked, setTracked] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [likeLoading, setLikeLoading] = useState(false);
   const [speedOpen, setSpeedOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const speedRef = useRef<HTMLDivElement>(null);
+
+  // Fetch persisted like state on mount
+  useEffect(() => {
+    const fp = getFingerprint();
+    if (!fp || !episodeId) return;
+    fetch(`/api/analytics/podcast-like?episodeId=${encodeURIComponent(episodeId)}&fingerprint=${encodeURIComponent(fp)}`)
+      .then((r) => r.json())
+      .then((data: { liked?: boolean; count?: number }) => {
+        setLiked(!!data.liked);
+        setLikeCount(data.count ?? 0);
+      })
+      .catch(() => null);
+  }, [episodeId]);
 
   useEffect(() => {
     const a = audioRef.current;
@@ -88,6 +114,31 @@ export function PodcastPlayer({ episodeId, audioUrl }: PodcastPlayerProps) {
     setSpeedOpen(false);
   };
 
+  const handleLike = async () => {
+    if (likeLoading) return;
+    const fp = getFingerprint();
+    setLikeLoading(true);
+    // Optimistic update
+    const nextLiked = !liked;
+    setLiked(nextLiked);
+    setLikeCount((c) => c + (nextLiked ? 1 : -1));
+    try {
+      const res = await fetch("/api/analytics/podcast-like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ episodeId, fingerprint: fp }),
+      });
+      const data = (await res.json()) as { liked?: boolean };
+      setLiked(!!data.liked);
+    } catch {
+      // Roll back on failure
+      setLiked(!nextLiked);
+      setLikeCount((c) => c + (nextLiked ? -1 : 1));
+    } finally {
+      setLikeLoading(false);
+    }
+  };
+
   const share = async () => {
     const url = typeof window !== "undefined" ? window.location.href : "";
     if (navigator.share) {
@@ -146,7 +197,8 @@ export function PodcastPlayer({ episodeId, audioUrl }: PodcastPlayerProps) {
         {/* Like + Share */}
         <div className="flex items-end gap-4">
           <button
-            onClick={() => setLiked((v) => !v)}
+            onClick={() => void handleLike()}
+            disabled={likeLoading}
             className="group flex flex-col items-center gap-0.5"
             title={liked ? "Unlike" : "Like"}
           >
@@ -166,7 +218,7 @@ export function PodcastPlayer({ episodeId, audioUrl }: PodcastPlayerProps) {
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
             <span className={`text-[10px] font-semibold transition-colors ${liked ? "text-[#ff4d6d]" : "text-white/40"}`}>
-              {liked ? "Liked" : "Like"}
+              {likeCount > 0 ? likeCount.toLocaleString() : (liked ? "Liked" : "Like")}
             </span>
           </button>
 

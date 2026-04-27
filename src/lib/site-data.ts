@@ -50,6 +50,7 @@ export interface PodcastEpisode {
   featured: boolean;
   seoDescription: string;
   listens?: number;
+  tags?: string[];
 }
 
 export interface DailyDose {

@@ -64,12 +64,21 @@ export default defineSchema({
     featured: v.boolean(),
     seoDescription: v.string(),
     listens: v.optional(v.number()),
+    tags: v.optional(v.array(v.string())),
     createdAt: v.string(),
     updatedAt: v.string(),
   })
     .index("by_slug", ["slug"])
     .index("by_status_publishedAtTs", ["status", "publishedAtTs"])
     .index("by_featured_publishedAtTs", ["featured", "publishedAtTs"]),
+
+  podcastLikes: defineTable({
+    episodeId: v.id("podcastEpisodes"),
+    fingerprint: v.string(),
+    createdAt: v.string(),
+  })
+    .index("by_episode", ["episodeId"])
+    .index("by_episode_fingerprint", ["episodeId", "fingerprint"]),
 
   adminDeviceTokens: defineTable({
     token: v.string(),

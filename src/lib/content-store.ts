@@ -60,6 +60,7 @@ export interface PodcastEpisodeInput {
   status: PodcastStatus;
   featured: boolean;
   seoDescription: string;
+  tags?: string[];
 }
 
 export interface DailyDoseInput {

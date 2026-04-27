@@ -41,6 +41,7 @@ const podcastInputValidator = v.object({
   status: podcastStatusValidator,
   featured: v.boolean(),
   seoDescription: v.string(),
+  tags: v.optional(v.array(v.string())),
 });
 
 const dailyDoseInputValidator = v.object({
@@ -199,6 +200,7 @@ function normalizePodcastInput(input: {
   status: "published" | "draft";
   featured: boolean;
   seoDescription: string;
+  tags?: string[];
 }) {
   const title = input.title.trim();
   const excerpt = input.excerpt.trim();
@@ -229,6 +231,7 @@ function normalizePodcastInput(input: {
     status: input.status,
     featured: input.featured,
     seoDescription,
+    tags: input.tags?.filter(Boolean).map((t) => t.trim()),
   };
 }
 
@@ -342,6 +345,7 @@ function mapPodcastEpisode(doc: PodcastEpisodeRecord) {
     featured: doc.featured,
     seoDescription: doc.seoDescription,
     listens: doc.listens ?? 0,
+    tags: (doc as { tags?: string[] }).tags ?? [],
   };
 }
 
@@ -1217,5 +1221,46 @@ export const deleteScheduledDose = mutationGeneric({
       await ctx.db.delete(existing._id);
     }
     return { ok: true };
+  },
+});
+
+export const togglePodcastLike = mutationGeneric({
+  args: {
+    episodeId: v.id("podcastEpisodes"),
+    fingerprint: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("podcastLikes")
+      .withIndex("by_episode", (q) => q.eq("episodeId", args.episodeId))
+      .collect();
+    const existing = rows.find((r) => (r as { fingerprint: string }).fingerprint === args.fingerprint);
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      return { liked: false };
+    }
+
+    await ctx.db.insert("podcastLikes", {
+      episodeId: args.episodeId,
+      fingerprint: args.fingerprint,
+      createdAt: new Date().toISOString(),
+    });
+    return { liked: true };
+  },
+});
+
+export const getPodcastLikeState = queryGeneric({
+  args: {
+    episodeId: v.id("podcastEpisodes"),
+    fingerprint: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const allLikes = await ctx.db
+      .query("podcastLikes")
+      .withIndex("by_episode", (q) => q.eq("episodeId", args.episodeId))
+      .collect();
+    const liked = allLikes.some((r) => (r as { fingerprint: string }).fingerprint === args.fingerprint);
+    return { liked, count: allLikes.length };
   },
 });
