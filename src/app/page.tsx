@@ -6,10 +6,12 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getFeaturedPodcastEpisodes, getFeaturedPosts } from "@/lib/content-store";
 import { isAdminAuthenticated } from "@/lib/simple-auth";
+import { TimelineMilestoneCard } from "@/components/TimelineMilestoneCard";
 import {
   formatDisplayDate,
   formatDurationMinutes,
   mediaCards,
+  timelineEvents,
 } from "@/lib/site-data";
 
 export default async function HomePage() {
@@ -51,6 +53,25 @@ export default async function HomePage() {
                   </Link>
                 )}
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Career Timeline ── */}
+        <section id="journey" className="px-4 py-10 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#2a6670]">
+                Career Timeline
+              </p>
+              <h2 className="display-font mt-2 text-4xl font-bold text-[#1f2d39] sm:text-5xl">
+                A voice career in milestones
+              </h2>
+            </div>
+            <div className="space-y-5">
+              {timelineEvents.map((event) => (
+                <TimelineMilestoneCard key={`${event.year}-${event.title}`} event={event} />
+              ))}
             </div>
           </div>
         </section>
