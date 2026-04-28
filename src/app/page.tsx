@@ -36,7 +36,7 @@ export default async function HomePage() {
                 {/* Photo */}
                 <div className="shrink-0">
                   <img
-                    src="/sudha-profile.jpg"
+                    src="/sudha.jpg"
                     alt="Sudha Devarakonda"
                     className="h-48 w-48 rounded-full object-cover shadow-xl ring-4 ring-[#d8c8b0] sm:h-56 sm:w-56"
                   />
