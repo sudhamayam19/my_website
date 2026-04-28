@@ -31,26 +31,41 @@ export default async function HomePage() {
         <section className="px-4 pb-10 pt-12 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="editorial-hero px-8 py-10 sm:px-12 sm:py-12">
-              <p className="editorial-hero-tag">RJ · Translator · Voice Artist · Podcaster</p>
-              <h1 className="display-font mt-4 max-w-3xl text-5xl font-bold leading-tight text-[#1d2d3c] sm:text-6xl">
-                Sudha Devarakonda
-              </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#4f5f69]">
-                Discover original writing, podcast episodes, reflections on voice and translation,
-                and thoughtful stories from Sudha Devarakonda&apos;s work across audio and language.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/blog" className="editorial-btn-primary">
-                  Read the blog
-                </Link>
-                <Link href="/podcasts" className="editorial-btn-secondary">
-                  Listen to podcasts
-                </Link>
-                {showAdminAccess && (
-                  <Link href="/admin" className="editorial-btn-secondary">
-                    Open admin
-                  </Link>
-                )}
+              <div className="flex flex-col items-center gap-10 md:flex-row md:items-center">
+
+                {/* Photo */}
+                <div className="shrink-0">
+                  <img
+                    src="/sudha-profile.jpg"
+                    alt="Sudha Devarakonda"
+                    className="h-48 w-48 rounded-full object-cover shadow-xl ring-4 ring-[#d8c8b0] sm:h-56 sm:w-56"
+                  />
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 text-center md:text-left">
+                  <p className="editorial-hero-tag">RJ · Translator · Voice Artist · Podcaster</p>
+                  <h1 className="display-font mt-4 text-5xl font-bold leading-tight text-[#1d2d3c] sm:text-6xl">
+                    Sudha Devarakonda
+                  </h1>
+                  <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#4f5f69]">
+                    Discover original writing, podcast episodes, reflections on voice and translation,
+                    and thoughtful stories from Sudha Devarakonda&apos;s work across audio and language.
+                  </p>
+                  <div className="mt-8 flex flex-wrap justify-center gap-3 md:justify-start">
+                    <Link href="/blog" className="editorial-btn-primary">
+                      Read the blog
+                    </Link>
+                    <Link href="/podcasts" className="editorial-btn-secondary">
+                      Listen to podcasts
+                    </Link>
+                    {showAdminAccess && (
+                      <Link href="/admin" className="editorial-btn-secondary">
+                        Open admin
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
