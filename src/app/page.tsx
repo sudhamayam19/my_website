@@ -34,13 +34,15 @@ export default async function HomePage() {
               <div className="flex flex-col items-center gap-10 md:flex-row md:items-center">
 
                 {/* Photo */}
-                <div className="shrink-0">
-                  <img
-                    src="/sudha-profile.jpg"
-                    alt="Sudha Devarakonda"
-                    className="h-48 w-48 rounded-full object-cover shadow-xl ring-4 ring-[#d8c8b0] sm:h-56 sm:w-56"
-                  />
-                </div>
+                {process.env.NEXT_PUBLIC_PROFILE_IMAGE_URL && (
+                  <div className="shrink-0">
+                    <img
+                      src={process.env.NEXT_PUBLIC_PROFILE_IMAGE_URL}
+                      alt="Sudha Devarakonda"
+                      className="h-48 w-48 rounded-full object-cover shadow-xl ring-4 ring-[#d8c8b0] sm:h-56 sm:w-56"
+                    />
+                  </div>
+                )}
 
                 {/* Info */}
                 <div className="flex-1 text-center md:text-left">
