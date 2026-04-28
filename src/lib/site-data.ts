@@ -98,7 +98,7 @@ export const timelineEvents: TimelineEvent[] = [
       "Started as an RJ and built a daily connection with listeners through music and storytelling.",
     accentClass: "border-[#2f7e87]",
     icon: "radio",
-    placeholderLabel: "Add first radio studio photo",
+    placeholderLabel: "Radio studio milestone",
     placeholderGradient: "from-[#d8ece8] to-[#f5eee0]",
   },
   {
@@ -108,7 +108,7 @@ export const timelineEvents: TimelineEvent[] = [
       "Expanded into commercials, narration, and branded voice projects for broadcast and digital media.",
     accentClass: "border-[#bb6a4b]",
     icon: "mic",
-    placeholderLabel: "Add voice recording session photo",
+    placeholderLabel: "Voice recording milestone",
     placeholderGradient: "from-[#f4e2d8] to-[#f9eed9]",
   },
   {
@@ -118,7 +118,7 @@ export const timelineEvents: TimelineEvent[] = [
       "Began professional translation projects to bridge language and culture for wider audiences.",
     accentClass: "border-[#a5894d]",
     icon: "languages",
-    placeholderLabel: "Add translation project photo",
+    placeholderLabel: "Translation career milestone",
     placeholderGradient: "from-[#efe8d1] to-[#f8f1df]",
   },
   {
@@ -128,7 +128,7 @@ export const timelineEvents: TimelineEvent[] = [
       "Launched long-format audio storytelling with interviews and personal reflections.",
     accentClass: "border-[#366779]",
     icon: "podcast",
-    placeholderLabel: "Add podcast setup photo",
+    placeholderLabel: "Podcast launch milestone",
     placeholderGradient: "from-[#dce8f2] to-[#ece6dd]",
   },
   {
@@ -138,7 +138,7 @@ export const timelineEvents: TimelineEvent[] = [
       "Publishing blogs, audio, and videos while preparing a scalable content workflow.",
     accentClass: "border-[#c07a2e]",
     icon: "sparkles",
-    placeholderLabel: "Add latest profile photo",
+    placeholderLabel: "Current media milestone",
     placeholderGradient: "from-[#f4e2c9] to-[#f7e8de]",
   },
 ];

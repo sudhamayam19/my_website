@@ -30,7 +30,7 @@ export default async function BlogPage() {
               Blog
             </h1>
             <p className="mt-4 max-w-2xl text-[#4f5f69]">
-              Explore published posts managed from the admin dashboard and stored in Convex.
+              Read original articles on voice, radio, translation, podcasting, and the craft behind spoken storytelling.
             </p>
             <BlogSearch posts={posts} categories={categories} />
           </section>

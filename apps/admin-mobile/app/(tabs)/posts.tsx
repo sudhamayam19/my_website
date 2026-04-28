@@ -473,12 +473,12 @@ export default function PostsScreen() {
 
           {doseTab === "today" && (
             <>
-              <Text style={styles.body}>Set today's quote or knowledge bite for the website banner.</Text>
+              <Text style={styles.body}>Set today&apos;s quote or knowledge bite for the website banner.</Text>
               <TextInput
                 style={[styles.input, styles.textarea]}
                 value={dailyDose.text}
                 onChangeText={(value) => setDailyDose((current) => ({ ...current, text: value }))}
-                placeholder="Write today's Daily Dose"
+                placeholder="Write today&apos;s Daily Dose"
                 placeholderTextColor="#8a989c"
                 multiline
               />

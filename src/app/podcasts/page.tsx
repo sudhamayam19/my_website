@@ -35,7 +35,7 @@ export default async function PodcastsPage() {
                   Podcasts
                 </h1>
                 <p className="mt-4 max-w-3xl text-[#4f5f69]">
-                  Listen to episodes directly on the site with clean summaries, cover art, and an in-browser player.
+                  Listen to original conversations, reflections, and audio stories published for listeners who enjoy thoughtful long-form content.
                 </p>
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:items-end">

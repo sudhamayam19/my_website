@@ -6,7 +6,11 @@ import { SITE_NAME, SITE_TAGLINE, socialLinks } from "@/lib/site-data";
 
 const baseFooterNav = [
   { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
   { label: "Blog", href: "/blog" },
+  { label: "Podcasts", href: "/podcasts" },
+  { label: "Contact", href: "/contact" },
+  { label: "Privacy Policy", href: "/privacy-policy" },
 ];
 
 export async function SiteFooter() {

@@ -37,8 +37,8 @@ export default async function HomePage() {
                 Sudha Devarakonda
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-relaxed text-[#4f5f69]">
-                Two decades of stories told through radio, voice, and language.
-                Explore Sudha&apos;s articles, podcast conversations, and reflections on culture, spirituality, and life.
+                Discover original writing, podcast episodes, reflections on voice and translation,
+                and thoughtful stories from Sudha Devarakonda&apos;s work across audio and language.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/blog" className="editorial-btn-primary">
