@@ -61,7 +61,7 @@ export default async function PodcastsPage() {
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🙏</span>
                 <div>
-                  <p className="font-bold text-[#1f2d39]">Enjoy Sudha's podcast?</p>
+                  <p className="font-bold text-[#1f2d39]">Enjoy Sudha&apos;s podcast?</p>
                   <p className="text-sm text-[#50616d]">4 years of conversations — support her to keep going.</p>
                 </div>
               </div>
