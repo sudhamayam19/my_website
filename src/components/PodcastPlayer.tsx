@@ -118,22 +118,19 @@ export function PodcastPlayer({ episodeId, audioUrl }: PodcastPlayerProps) {
     if (likeLoading) return;
     const fp = getFingerprint();
     setLikeLoading(true);
-    // Optimistic update
     const nextLiked = !liked;
     setLiked(nextLiked);
-    setLikeCount((c) => c + (nextLiked ? 1 : -1));
     try {
       const res = await fetch("/api/analytics/podcast-like", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ episodeId, fingerprint: fp }),
       });
-      const data = (await res.json()) as { liked?: boolean };
+      const data = (await res.json()) as { liked?: boolean; count?: number };
       setLiked(!!data.liked);
+      if (typeof data.count === "number") setLikeCount(data.count);
     } catch {
-      // Roll back on failure
       setLiked(!nextLiked);
-      setLikeCount((c) => c + (nextLiked ? -1 : 1));
     } finally {
       setLikeLoading(false);
     }

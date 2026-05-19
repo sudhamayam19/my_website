@@ -1238,7 +1238,8 @@ export const togglePodcastLike = mutationGeneric({
 
     if (existing) {
       await ctx.db.delete(existing._id);
-      return { liked: false };
+      const count = rows.length - 1;
+      return { liked: false, count };
     }
 
     await ctx.db.insert("podcastLikes", {
@@ -1246,7 +1247,8 @@ export const togglePodcastLike = mutationGeneric({
       fingerprint: args.fingerprint,
       createdAt: new Date().toISOString(),
     });
-    return { liked: true };
+    const count = rows.length + 1;
+    return { liked: true, count };
   },
 });
 
