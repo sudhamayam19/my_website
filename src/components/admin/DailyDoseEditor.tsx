@@ -310,7 +310,91 @@ function DayRow({
   );
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+function next20Days(): string[] {
+  const days: string[] = [];
+  for (let i = 0; i < 20; i++) {
+    const ms = Date.now() + 5.5 * 60 * 60 * 1000 + i * 86400_000;
+    days.push(new Date(ms).toISOString().slice(0, 10));
+  }
+  return days;
+}
+
+function BulkImport({ onDone }: { onDone: (doses: ScheduledDose[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [raw, setRaw] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState("");
+
+  const lines = raw.split("\n").map((l) => l.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+
+  const run = async () => {
+    if (!lines.length) return;
+    setSaving(true);
+    setResult("");
+    const days = next20Days();
+    const saved: ScheduledDose[] = [];
+    let ok = 0; let fail = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const date = days[i];
+      if (!date) break;
+      try {
+        const res = await fetch("/api/admin/daily-dose/schedule", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date, text: lines[i], style: "scroll" }),
+        });
+        const data = (await res.json()) as { id?: string; error?: string };
+        if (res.ok) {
+          saved.push({ id: data.id ?? date, date, text: lines[i], style: "scroll" });
+          ok++;
+        } else { fail++; }
+      } catch { fail++; }
+    }
+    setSaving(false);
+    setResult(`✓ ${ok} scheduled${fail ? `, ${fail} failed` : ""}`);
+    onDone(saved);
+    if (!fail) { setRaw(""); setOpen(false); }
+  };
+
+  return (
+    <div className="rounded-2xl border border-[#d89a55]/40 bg-[#fff9ef] p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-bold text-sm text-[#1f2d39]">Bulk Import</p>
+          <p className="text-xs text-[#6b7f8a]">Paste multiple quotes — one per line — to schedule them all at once.</p>
+        </div>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="rounded-full bg-[#1f6973] px-4 py-2 text-xs font-bold text-white hover:bg-[#185860] transition"
+        >
+          {open ? "Cancel" : "Bulk Import"}
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-4 space-y-3">
+          <textarea
+            value={raw}
+            onChange={(e) => setRaw(e.target.value)}
+            rows={8}
+            placeholder={"Paste quotes here, one per line:\nYour life changes quietly first...\nPeace is not found by escaping life..."}
+            className="w-full rounded-xl border border-[#d3c1a8] bg-white px-3 py-2.5 text-sm text-[#1f2d39] outline-none focus:border-[#2a6670]"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={run}
+              disabled={saving || !lines.length}
+              className="rounded-full bg-[#1f6973] px-5 py-2 text-sm font-bold text-white hover:bg-[#185860] disabled:opacity-60 transition"
+            >
+              {saving ? "Scheduling…" : `Schedule ${lines.length} quote${lines.length !== 1 ? "s" : ""}`}
+            </button>
+            {result && <p className="text-sm font-medium text-[#2a6670]">{result}</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function DailyDoseEditor({ initialDose }: { initialDose: DailyDose }) {
   const [tab, setTab] = useState<"today" | "schedule">("today");
@@ -363,9 +447,14 @@ export function DailyDoseEditor({ initialDose }: { initialDose: DailyDose }) {
 
       {tab === "schedule" && (
         <div className="space-y-3">
+          <BulkImport onDone={(doses) => {
+            setSchedule((prev) => {
+              const dates = new Set(doses.map((d) => d.date));
+              return [...prev.filter((d) => !dates.has(d.date)), ...doses].sort((a, b) => a.date.localeCompare(b.date));
+            });
+          }} />
           <p className="text-sm text-[#5f6f79]">
-            Schedule up to 10 days of daily doses in advance. Each day&apos;s dose will automatically
-            appear on the website at midnight IST.
+            Or schedule individual days below. Each dose automatically appears at midnight IST.
           </p>
 
           {loadingSchedule ? (
