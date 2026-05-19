@@ -334,12 +334,14 @@ function BulkImport({ onDone }: { onDone: (doses: ScheduledDose[]) => void }) {
     const days = next20Days();
     const saved: ScheduledDose[] = [];
     let ok = 0; let fail = 0;
+    let lastError = "";
     for (let i = 0; i < lines.length; i++) {
       const date = days[i];
       if (!date) break;
       try {
         const res = await fetch("/api/admin/daily-dose/schedule", {
           method: "PUT",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ date, text: lines[i], style: "scroll" }),
         });
@@ -347,11 +349,18 @@ function BulkImport({ onDone }: { onDone: (doses: ScheduledDose[]) => void }) {
         if (res.ok) {
           saved.push({ id: data.id ?? date, date, text: lines[i], style: "scroll" });
           ok++;
-        } else { fail++; }
-      } catch { fail++; }
+        } else {
+          fail++;
+          lastError = data.error ?? `HTTP ${res.status}`;
+        }
+      } catch (e) {
+        fail++;
+        lastError = e instanceof Error ? e.message : "Network error";
+      }
     }
     setSaving(false);
-    setResult(`✓ ${ok} scheduled${fail ? `, ${fail} failed` : ""}`);
+    const errDetail = fail && lastError ? ` (${lastError})` : "";
+    setResult(`✓ ${ok} scheduled${fail ? `, ${fail} failed${errDetail}` : ""}`);
     onDone(saved);
     if (!fail) { setRaw(""); setOpen(false); }
   };
