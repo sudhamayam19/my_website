@@ -5,7 +5,8 @@ import { getPodcastNav } from "@/components/AuthNav";
 import { PodcastPlayer } from "@/components/PodcastPlayer";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getPodcastEpisodeById, getPodcastEpisodes } from "@/lib/content-store";
+import { CommentsSection } from "@/components/CommentsSection";
+import { getCommentsByPostId, getPodcastEpisodeById, getPodcastEpisodes } from "@/lib/content-store";
 import { formatDisplayDate, formatDurationMinutes, SITE_NAME } from "@/lib/site-data";
 
 interface Props { params: Promise<{ id: string }> }
@@ -24,9 +25,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PodcastEpisodePage({ params }: Props) {
   const { id } = await params;
   const navItems = await getPodcastNav();
-  const [episode, allEpisodes] = await Promise.all([
+  const [episode, allEpisodes, comments] = await Promise.all([
     getPodcastEpisodeById(id),
     getPodcastEpisodes(),
+    getCommentsByPostId(id),
   ]);
 
   if (!episode || episode.status !== "published") notFound();
@@ -159,6 +161,9 @@ export default async function PodcastEpisodePage({ params }: Props) {
                 {episode.description || episode.excerpt}
               </p>
             </div>
+
+            {/* Comments */}
+            <CommentsSection postId={episode.id} initialComments={comments} />
 
             {/* Support card */}
             <SupportCard />
