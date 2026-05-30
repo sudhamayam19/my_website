@@ -40,10 +40,10 @@ function MessageContent({ text, isUser }: { text: string; isUser: boolean }) {
 }
 
 const SUGGESTED = [
-  "What are her latest blog posts?",
+  "I'm feeling lonely — got something for me?",
+  "Suggest an episode I'd like",
+  "I overthink everything",
   "What services does Sudha offer?",
-  "Tell me about her latest podcast",
-  "How can I contact her?",
 ];
 
 export function ChatWidget() {
@@ -260,7 +260,7 @@ export function ChatWidget() {
                     Hello! I&apos;m here to help
                   </p>
                   <p style={{ fontSize: 13, color: "#607179", lineHeight: 1.5 }}>
-                    Ask me anything about Sudha&apos;s services, work, or how to get in touch.
+                    Tell me what&apos;s on your mind, and I&apos;ll find a story or episode for you — or ask about Sudha&apos;s work.
                   </p>
                 </div>
               )}
