@@ -173,6 +173,13 @@ export default async function HomePage() {
               </div>
             </div>
           </section>
+
+          {/* ── Newsletter ── */}
+          <section className="px-4 pb-4 pt-2 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl">
+              <NewsletterForm />
+            </div>
+          </section>
         )}
 
         {/* ── Featured Podcast Episodes ── */}
@@ -255,12 +262,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ── Newsletter ── */}
-        <section className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <NewsletterForm />
-          </div>
-        </section>
       </main>
 
       <SiteFooter />
