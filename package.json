@@ -11,7 +11,7 @@
     "mobile:install": "npm --prefix apps/admin-mobile install",
     "mobile:start": "npm --prefix apps/admin-mobile run start",
     "mobile:android": "npm --prefix apps/admin-mobile run android",
-    "build": "npx convex deploy && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
