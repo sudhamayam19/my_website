@@ -131,7 +131,6 @@ export default async function HomePage() {
 
         {/* ── Featured Posts ── */}
         {featuredPosts.length > 0 && (
-          <>
           <section className="px-4 py-10 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-7xl">
               <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
@@ -174,15 +173,14 @@ export default async function HomePage() {
               </div>
             </div>
           </section>
-
-          {/* ── Newsletter ── */}
-          <section className="px-4 pb-4 pt-2 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-7xl">
-              <NewsletterForm />
-            </div>
-          </section>
-          </>
         )}
+
+        {/* ── Newsletter ── */}
+        <section className="px-4 pb-4 pt-2 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <NewsletterForm />
+          </div>
+        </section>
 
         {/* ── Featured Podcast Episodes ── */}
         {featuredEpisodes.length > 0 && (
