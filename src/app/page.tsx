@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getHomeNav } from "@/components/AuthNav";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { PlatformIcon } from "@/components/PlatformIcon";
+import { CareerTimeline } from "@/components/CareerTimeline";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getFeaturedPodcastEpisodes, getFeaturedPosts } from "@/lib/content-store";
@@ -10,7 +11,6 @@ import {
   formatDisplayDate,
   formatDurationMinutes,
   mediaCards,
-  timelineEvents,
 } from "@/lib/site-data";
 
 export default async function HomePage() {
@@ -71,63 +71,8 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ── Career Timeline (horizontal) ── */}
-        <section id="journey" className="px-4 py-10 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#2a6670]">
-                Career Timeline
-              </p>
-              <h2 className="display-font mt-2 text-4xl font-bold text-[#1f2d39] sm:text-5xl">
-                A voice career in milestones
-              </h2>
-            </div>
-
-            {/* Scrollable track */}
-            <div className="overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6">
-              <div className="relative min-w-[700px]">
-
-                {/* Horizontal connecting line */}
-                <div className="absolute top-[52px] left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-[#2f7e87] via-[#a5894d] to-[#c07a2e]" />
-
-                {/* Milestone nodes */}
-                <div className="relative grid grid-cols-5 gap-2">
-                  {timelineEvents.map((event, i) => {
-                    const dotColors = [
-                      "bg-[#2f7e87]", "bg-[#bb6a4b]", "bg-[#a5894d]",
-                      "bg-[#366779]", "bg-[#c07a2e]",
-                    ];
-                    const borderColors = [
-                      "border-[#2f7e87]", "border-[#bb6a4b]", "border-[#a5894d]",
-                      "border-[#366779]", "border-[#c07a2e]",
-                    ];
-                    return (
-                      <div key={event.year} className="flex flex-col items-center">
-                        {/* Dot */}
-                        <div className={`relative z-10 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white shadow-md ${dotColors[i]}`}>
-                          <div className="h-2.5 w-2.5 rounded-full bg-white/80" />
-                        </div>
-
-                        {/* Card */}
-                        <div className={`mt-4 w-full rounded-2xl border-2 ${borderColors[i]} bg-[#fffaf3] p-4 text-center shadow-sm`}>
-                          <p className="text-[11px] font-black uppercase tracking-widest text-[#2a6670]">
-                            {event.year}
-                          </p>
-                          <p className="display-font mt-2 text-base font-bold leading-snug text-[#1f2d39]">
-                            {event.title}
-                          </p>
-                          <p className="mt-2 text-xs leading-relaxed text-[#4f5f69]">
-                            {event.description}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* ── Career Timeline ── */}
+        <CareerTimeline />
 
         {/* ── Featured Posts ── */}
         {featuredPosts.length > 0 && (
