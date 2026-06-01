@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { PlatformIcon } from "@/components/PlatformIcon";
-import { NewsletterForm } from "@/components/NewsletterForm";
 import { isAdminAuthenticated } from "@/lib/simple-auth";
 import { SITE_NAME, SITE_TAGLINE, socialLinks } from "@/lib/site-data";
 
@@ -67,10 +66,6 @@ export async function SiteFooter() {
             ))}
           </div>
         </div>
-      </div>
-
-      <div className="mx-auto mt-10 w-full max-w-7xl border-t border-[#3b4b57] pt-8">
-        <NewsletterForm variant="dark" />
       </div>
 
       <div className="mx-auto mt-8 w-full max-w-7xl border-t border-[#3b4b57] pt-6 text-sm text-[#b7ab9e]">
