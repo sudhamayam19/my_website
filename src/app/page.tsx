@@ -166,6 +166,9 @@ export default async function HomePage() {
                         </div>
                         <h3 className="display-font mt-4 text-2xl font-bold text-[#1f2d39]">{post.title}</h3>
                         <p className="mt-3 text-sm leading-relaxed text-[#4f5f69]">{post.excerpt}</p>
+                        <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2a6670] group-hover:gap-2 transition-all">
+                          Read more <span>→</span>
+                        </span>
                       </div>
                     </article>
                   </Link>
@@ -219,6 +222,9 @@ export default async function HomePage() {
                         </div>
                         <h3 className="display-font mt-4 text-2xl font-bold text-[#1f2d39]">{episode.title}</h3>
                         <p className="mt-3 text-sm leading-relaxed text-[#4f5f69]">{episode.excerpt}</p>
+                        <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[#2a6670] group-hover:gap-2 transition-all">
+                          Listen now <span>→</span>
+                        </span>
                       </div>
                     </article>
                   </Link>
