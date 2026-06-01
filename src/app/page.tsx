@@ -235,34 +235,26 @@ export default async function HomePage() {
         )}
 
         {/* ── Platforms ── */}
-        <section id="media" className="px-4 py-10 sm:px-6 lg:px-8">
+        <section id="media" className="px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#2a6670]">
-                Platforms
-              </p>
-              <h2 className="display-font mt-2 text-4xl font-bold text-[#1f2d39] sm:text-5xl">
-                Listen and watch
-              </h2>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#2a6670] mb-4">
+              Find me on
+            </p>
+            <div className="flex flex-wrap gap-3">
               {mediaCards.map((card) => (
-                <article
+                <a
                   key={card.id}
-                  className="editorial-card group overflow-hidden transition hover:-translate-y-1"
+                  href={card.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`group flex items-center gap-3 rounded-full border border-[#d8c8b0] bg-[#fffaf3] px-5 py-3 transition hover:shadow-md hover:-translate-y-0.5`}
                 >
-                  <div className={`relative flex h-36 items-center justify-center bg-gradient-to-br ${card.gradientClass} text-white`}>
-                    <PlatformIcon platformId={card.id} className="h-16 w-16" />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="display-font text-3xl font-bold text-[#1f2d39]">{card.platform}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[#4f5f69]">{card.description}</p>
-                    <a href={card.href} target="_blank" rel="noopener noreferrer" className="editorial-btn-secondary mt-5">
-                      {card.buttonLabel}
-                    </a>
-                  </div>
-                </article>
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${card.gradientClass} text-white`}>
+                    <PlatformIcon platformId={card.id} className="h-4 w-4" />
+                  </span>
+                  <span className="font-semibold text-[#1f2d39] text-sm">{card.platform}</span>
+                  <span className="text-xs text-[#2a6670] font-medium">{card.buttonLabel} →</span>
+                </a>
               ))}
             </div>
           </div>
