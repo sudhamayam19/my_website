@@ -581,3 +581,44 @@ export async function addAdminReply(input: {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.addAdminReply, input);
 }
+
+export interface MediaAppearance {
+  _id: string;
+  title: string;
+  outlet: string;
+  category: "tv" | "radio" | "print" | "online" | "podcast" | "event";
+  date: string;
+  dateTs: number;
+  description?: string;
+  link?: string;
+  imageUrl?: string;
+  featured: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getMediaAppearances(): Promise<MediaAppearance[]> {
+  const client = getConvexClient();
+  if (!client) return [];
+  return await client.query(api.content.listMediaAppearances, {});
+}
+
+export async function upsertMediaAppearance(input: {
+  id?: string;
+  title: string;
+  outlet: string;
+  category: "tv" | "radio" | "print" | "online" | "podcast" | "event";
+  date: string;
+  description?: string;
+  link?: string;
+  imageUrl?: string;
+  featured: boolean;
+}): Promise<{ id: string }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.upsertMediaAppearance, input as Parameters<typeof client.mutation>[1]);
+}
+
+export async function deleteMediaAppearance(id: string): Promise<void> {
+  const client = ensureConvexForWrites(getConvexClient());
+  await client.mutation(api.content.deleteMediaAppearance, { id } as Parameters<typeof client.mutation>[1]);
+}

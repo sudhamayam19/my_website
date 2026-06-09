@@ -110,4 +110,27 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
   }).index("by_date", ["date"]),
+
+  mediaAppearances: defineTable({
+    title: v.string(),
+    outlet: v.string(),         // e.g. "Deccan Chronicle", "Radio Mirchi"
+    category: v.union(
+      v.literal("tv"),
+      v.literal("radio"),
+      v.literal("print"),
+      v.literal("online"),
+      v.literal("podcast"),
+      v.literal("event"),
+    ),
+    date: v.string(),           // YYYY-MM-DD
+    dateTs: v.number(),
+    description: v.optional(v.string()),
+    link: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    featured: v.boolean(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_dateTs", ["dateTs"])
+    .index("by_featured_dateTs", ["featured", "dateTs"]),
 });

@@ -1266,3 +1266,57 @@ export const getPodcastLikeState = queryGeneric({
     return { liked, count: allLikes.length };
   },
 });
+
+// ─── Media Appearances ────────────────────────────────────────────────────────
+
+export const listMediaAppearances = queryGeneric({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("mediaAppearances").withIndex("by_dateTs").order("desc").collect();
+    return rows;
+  },
+});
+
+export const upsertMediaAppearance = mutationGeneric({
+  args: {
+    id: v.optional(v.id("mediaAppearances")),
+    title: v.string(),
+    outlet: v.string(),
+    category: v.union(v.literal("tv"), v.literal("radio"), v.literal("print"), v.literal("online"), v.literal("podcast"), v.literal("event")),
+    date: v.string(),
+    description: v.optional(v.string()),
+    link: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    featured: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    const dateTs = new Date(args.date + "T00:00:00Z").getTime();
+    const data = {
+      title: args.title,
+      outlet: args.outlet,
+      category: args.category,
+      date: args.date,
+      dateTs,
+      description: args.description,
+      link: args.link,
+      imageUrl: args.imageUrl,
+      featured: args.featured,
+      updatedAt: now,
+    };
+    if (args.id) {
+      await ctx.db.patch(args.id, data);
+      return { id: String(args.id) };
+    }
+    const id = await ctx.db.insert("mediaAppearances", { ...data, createdAt: now });
+    return { id: String(id) };
+  },
+});
+
+export const deleteMediaAppearance = mutationGeneric({
+  args: { id: v.id("mediaAppearances") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+    return { ok: true };
+  },
+});
