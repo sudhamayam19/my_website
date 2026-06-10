@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 };
 
 // Add photos here — just paste the URL and a caption
-const photos = [
+type Photo = { src: string; caption?: string; category?: string };
+const photos: Photo[] = [
   // { src: "https://...", caption: "At Radio Mirchi Studio, 2018", category: "Radio" },
   // Photos coming soon — send them to be added!
 ];
