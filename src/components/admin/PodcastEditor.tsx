@@ -133,9 +133,10 @@ export function PodcastEditor({ mode, initialEpisode }: PodcastEditorProps) {
     setSuccess("");
 
     try {
+      const autoExcerpt = form.description.trim().slice(0, 160).replace(/\s+\S*$/, "") || form.title;
       const payload = {
         title: form.title,
-        excerpt: form.excerpt,
+        excerpt: autoExcerpt,
         description: form.description,
         showTitle: form.showTitle,
         publishedAt: form.publishedAt,
@@ -198,12 +199,7 @@ export function PodcastEditor({ mode, initialEpisode }: PodcastEditorProps) {
         </label>
 
         <label className="block space-y-2">
-          <span className="text-sm font-semibold text-[#2f3f4e]">Short excerpt</span>
-          <textarea className={`${inputClassName} min-h-24`} value={form.excerpt} onChange={(event) => updateField("excerpt", event.target.value)} />
-        </label>
-
-        <label className="block space-y-2">
-          <span className="text-sm font-semibold text-[#2f3f4e]">Full description</span>
+          <span className="text-sm font-semibold text-[#2f3f4e]">Description</span>
           <textarea className={`${inputClassName} min-h-40`} value={form.description} onChange={(event) => updateField("description", event.target.value)} />
         </label>
 
