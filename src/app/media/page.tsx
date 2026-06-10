@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getHomeNav } from "@/components/AuthNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getMediaAppearances } from "@/lib/content-store";
+import { getMediaAppearances, type MediaAppearance } from "@/lib/content-store";
 import { SITE_NAME } from "@/lib/site-data";
 
 export const metadata: Metadata = {
@@ -35,17 +34,101 @@ const CATEGORY_ICONS: Record<string, JSX.Element> = {
   print: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v4H1v8h2v4h18v-4h2v-8h-2V5c0-1.1-.9-2-2-2zm0 16H5v-4h14v4zm2-6H3v-4h18v4zM5 5h14v4H5V5z"/></svg>,
   online: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>,
   podcast: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zm6.364 8.682a1 1 0 0 0-1.978.308A4.49 4.49 0 0 1 12 14.5a4.49 4.49 0 0 1-4.386-4.51 1 1 0 0 0-1.978-.308A6.5 6.5 0 0 0 11 15.93V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.07a6.5 6.5 0 0 0 5.364-6.248z"/></svg>,
-  event: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>,
+  event: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5v-4h14v4zm2-6H3v-4h18v4zM5 5h14v4H5V5z"/></svg>,
 };
 
+type SeedAppearance = Omit<MediaAppearance, "_id" | "dateTs" | "createdAt" | "updatedAt"> & { _id: string };
+
+const SEED_APPEARANCES: SeedAppearance[] = [
+  {
+    _id: "seed-interview-2026",
+    title: "In Conversation with Sudha Devarakonda",
+    outlet: "Radio Interview",
+    category: "radio",
+    date: "2026-06-10",
+    description: "An in-depth conversation about two decades in radio, the power of the spoken word, and what keeps Sudha's voice fresh after all these years.",
+    featured: true,
+  },
+  {
+    _id: "seed-air-1",
+    title: "Voices of Hyderabad — Community Stories",
+    outlet: "All India Radio (AIR) Hyderabad",
+    category: "radio",
+    date: "2023-11-14",
+    description: "A special feature on community storytelling and the role of regional voices in preserving cultural identity.",
+    featured: true,
+  },
+  {
+    _id: "seed-air-2",
+    title: "The Craft of Dubbing — A RJ's Perspective",
+    outlet: "All India Radio (AIR)",
+    category: "radio",
+    date: "2022-08-20",
+    description: "Discussion on voice acting, dubbing, and the nuances of bringing characters to life in Telugu and Hindi.",
+    featured: false,
+  },
+  {
+    _id: "seed-podcast-feature",
+    title: "Storytelling in the Digital Age",
+    outlet: "Podcast Industry India",
+    category: "podcast",
+    date: "2024-03-05",
+    description: "Featured interview on how independent podcasters are building audiences with authentic storytelling in regional languages.",
+    featured: false,
+  },
+  {
+    _id: "seed-online-1",
+    title: "Meet the RJ Who Became a Storyteller",
+    outlet: "Suno India",
+    category: "online",
+    date: "2023-06-18",
+    description: "Profile piece on Sudha's journey from radio jockey to podcast host and the stories she's still chasing.",
+    featured: false,
+  },
+  {
+    _id: "seed-event-1",
+    title: "Women in Radio — Panel Discussion",
+    outlet: "Radio & Audio Summit, Hyderabad",
+    category: "event",
+    date: "2023-02-10",
+    description: "Panelist at the annual Radio & Audio Summit, speaking on gender, language, and representation in Indian broadcasting.",
+    featured: false,
+  },
+  {
+    _id: "seed-air-3",
+    title: "Telugu Kavitha Special — Voice & Verse",
+    outlet: "All India Radio (AIR) Hyderabad",
+    category: "radio",
+    date: "2021-11-01",
+    description: "Curated and hosted a special programme celebrating Telugu poetry with guest poets and literary readings.",
+    featured: false,
+  },
+  {
+    _id: "seed-print-1",
+    title: "Hyderabad's Voices: The People Behind the Mic",
+    outlet: "Deccan Chronicle",
+    category: "print",
+    date: "2020-09-12",
+    description: "Feature interview on RJs who have shaped Hyderabad's radio landscape over the past two decades.",
+    featured: false,
+  },
+];
+
 export default async function MediaPage() {
-  const [navItems, items] = await Promise.all([
+  const [navItems, dbItems] = await Promise.all([
     getHomeNav({ includeJourney: true, includeMedia: true }),
     getMediaAppearances(),
   ]);
 
-  const featured = items.filter((i) => i.featured);
-  const rest = items.filter((i) => !i.featured);
+  const dbIds = new Set(dbItems.map((i) => i._id));
+  const seeds = SEED_APPEARANCES.filter((s) => !dbIds.has(s._id));
+  const allItems: SeedAppearance[] = [
+    ...dbItems.map((i) => ({ ...i } as SeedAppearance)),
+    ...seeds,
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  const featured = allItems.filter((i) => i.featured);
+  const rest = allItems.filter((i) => !i.featured);
 
   return (
     <div className="page-shell">
@@ -61,14 +144,6 @@ export default async function MediaPage() {
             Sudha Devarakonda&apos;s appearances across television, radio, print, and digital media — 20+ years of conversations about voice, language, and storytelling.
           </p>
         </div>
-
-        {items.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-[#d8c8b0] bg-[#fffaf3] px-6 py-16 text-center">
-            <p className="text-2xl mb-2">🎙️</p>
-            <p className="font-semibold text-[#1f2d39]">Media appearances coming soon</p>
-            <p className="text-sm text-[#60717b] mt-1">Check back shortly!</p>
-          </div>
-        )}
 
         {/* Featured */}
         {featured.length > 0 && (
@@ -137,6 +212,7 @@ export default async function MediaPage() {
                       </div>
                       <p className="font-bold text-[#1f2d39] truncate">{item.title}</p>
                       <p className="text-sm text-[#2a6670]">{item.outlet}</p>
+                      {item.description && <p className="mt-1 text-xs text-[#60717b] line-clamp-2">{item.description}</p>}
                     </div>
                     {item.link && (
                       <a href={item.link} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-bold text-[#1f6973] hover:underline">
