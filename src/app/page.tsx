@@ -3,9 +3,10 @@ import { getHomeNav } from "@/components/AuthNav";
 import { NewsletterForm } from "@/components/NewsletterForm";
 import { PlatformIcon } from "@/components/PlatformIcon";
 import { CareerTimeline } from "@/components/CareerTimeline";
+import { ChangeMakerSpotlight } from "@/components/ChangeMakerSpotlight";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { getFeaturedPodcastEpisodes, getFeaturedPosts } from "@/lib/content-store";
+import { getFeaturedPodcastEpisodes, getFeaturedPosts, getChangeMakers } from "@/lib/content-store";
 import { isAdminAuthenticated } from "@/lib/simple-auth";
 import {
   formatDisplayDate,
@@ -15,9 +16,10 @@ import {
 
 export default async function HomePage() {
   const homeNav = await getHomeNav({ includeJourney: true, includeMedia: true, includeBlog: true });
-  const [featuredPosts, featuredEpisodes] = await Promise.all([
+  const [featuredPosts, featuredEpisodes, changeMakers] = await Promise.all([
     getFeaturedPosts(3),
     getFeaturedPodcastEpisodes(3),
+    getChangeMakers(true),
   ]);
   const showAdminAccess = await isAdminAuthenticated();
 
@@ -70,6 +72,9 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ── Change Makers ── */}
+        <ChangeMakerSpotlight items={changeMakers} />
 
         {/* ── Career Timeline ── */}
         <CareerTimeline />

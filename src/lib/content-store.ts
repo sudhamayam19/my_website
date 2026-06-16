@@ -582,6 +582,45 @@ export async function addAdminReply(input: {
   return await client.mutation(api.content.addAdminReply, input);
 }
 
+export interface ChangeMaker {
+  _id: string;
+  name: string;
+  tagline: string;
+  story: string;
+  imageUrl?: string;
+  link?: string;
+  weekOf: string;
+  weekOfTs: number;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getChangeMakers(publishedOnly = false): Promise<ChangeMaker[]> {
+  const client = getConvexClient();
+  if (!client) return [];
+  return await client.query(api.content.listChangeMakers, { publishedOnly });
+}
+
+export async function upsertChangeMaker(input: {
+  id?: string;
+  name: string;
+  tagline: string;
+  story: string;
+  imageUrl?: string;
+  link?: string;
+  weekOf: string;
+  published: boolean;
+}): Promise<{ id: string }> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.upsertChangeMaker, input as Parameters<typeof client.mutation>[1]);
+}
+
+export async function deleteChangeMaker(id: string): Promise<void> {
+  const client = ensureConvexForWrites(getConvexClient());
+  await client.mutation(api.content.deleteChangeMaker, { id } as Parameters<typeof client.mutation>[1]);
+}
+
 export interface MediaAppearance {
   _id: string;
   title: string;
