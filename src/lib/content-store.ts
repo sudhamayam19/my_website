@@ -669,3 +669,14 @@ export async function deleteMediaAppearance(id: string): Promise<void> {
   const client = ensureConvexForWrites(getConvexClient());
   await client.mutation(api.content.deleteMediaAppearance, { id } as Parameters<typeof client.mutation>[1]);
 }
+
+export async function generateUploadUrl(): Promise<string> {
+  const client = ensureConvexForWrites(getConvexClient());
+  return await client.mutation(api.content.generateUploadUrl, {} as Parameters<typeof client.mutation>[1]);
+}
+
+export async function getStorageUrl(storageId: string): Promise<string | null> {
+  const client = getConvexClient();
+  if (!client) return null;
+  return await client.query(api.content.getStorageUrl, { storageId } as Parameters<typeof client.query>[1]);
+}

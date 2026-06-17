@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface ChangeMaker {
   _id: string;
@@ -17,6 +17,86 @@ const EMPTY: Omit<ChangeMaker, "_id"> = {
   name: "", tagline: "", story: "", imageUrl: "", link: "",
   weekOf: new Date().toISOString().slice(0, 10), published: false,
 };
+
+function PhotoPicker({ value, onChange }: { value?: string; onChange: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [drag, setDrag] = useState(false);
+
+  const upload = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploading(true);
+    try {
+      // 1. Get Convex upload URL
+      const urlRes = await fetch("/api/admin/upload-url", { method: "POST", credentials: "same-origin" });
+      const { uploadUrl, error } = (await urlRes.json()) as { uploadUrl?: string; error?: string };
+      if (!uploadUrl) throw new Error(error ?? "Could not get upload URL");
+
+      // 2. Upload file to Convex storage
+      const uploadRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = (await uploadRes.json()) as { storageId: string };
+
+      // 3. Resolve to public URL
+      const urlRes2 = await fetch(`/api/admin/storage-url?id=${storageId}`, { credentials: "same-origin" });
+      const { url } = (await urlRes2.json()) as { url: string };
+      onChange(url);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) void upload(file);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDrag(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) void upload(file);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-xs font-semibold text-[#304a56]">Photo (optional)</span>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-5 text-center transition
+          ${drag ? "border-[#2a6670] bg-[#f0f8f8]" : "border-[#d3c1a8] bg-white hover:border-[#2a6670]"}`}
+      >
+        {uploading ? (
+          <p className="text-xs text-[#8fa3ad]">Uploading…</p>
+        ) : value ? (
+          <>
+            <img src={value} alt="preview" className="h-20 w-20 rounded-full object-cover border border-[#d3c1a8]" />
+            <p className="text-[11px] text-[#8fa3ad]">Tap to change</p>
+          </>
+        ) : (
+          <>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8fa3ad" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <p className="text-xs text-[#8fa3ad]">Tap or drag & drop a photo</p>
+          </>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+      </div>
+      {value && (
+        <button type="button" onClick={() => onChange("")}
+          className="text-[11px] text-[#c08080] hover:underline">
+          Remove photo
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ChangeMakersAdmin() {
   const [items, setItems] = useState<ChangeMaker[]>([]);
@@ -117,12 +197,10 @@ export function ChangeMakersAdmin() {
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-[#304a56]">Photo URL (optional)</span>
-              <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-[#d3c1a8] bg-white px-3 py-2 text-sm outline-none focus:border-[#2a6670]" />
-            </label>
+            <PhotoPicker
+              value={form.imageUrl}
+              onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+            />
             <label className="space-y-1.5">
               <span className="text-xs font-semibold text-[#304a56]">Read more link (optional)</span>
               <input value={form.link} onChange={(e) => setForm((f) => ({ ...f, link: e.target.value }))}
