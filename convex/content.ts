@@ -1320,3 +1320,62 @@ export const deleteMediaAppearance = mutationGeneric({
     return { ok: true };
   },
 });
+
+// ─── Change Makers ────────────────────────────────────────────────────────────
+
+export const listChangeMakers = queryGeneric({
+  args: { publishedOnly: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const publishedOnly = args.publishedOnly ?? false;
+    const rows = publishedOnly
+      ? await ctx.db
+          .query("changeMakers")
+          .withIndex("by_published_weekOfTs", (q) => q.eq("published", true))
+          .order("desc")
+          .collect()
+      : await ctx.db.query("changeMakers").withIndex("by_weekOfTs").order("desc").collect();
+    return rows;
+  },
+});
+
+export const upsertChangeMaker = mutationGeneric({
+  args: {
+    id: v.optional(v.id("changeMakers")),
+    name: v.string(),
+    tagline: v.string(),
+    story: v.string(),
+    imageUrl: v.optional(v.string()),
+    link: v.optional(v.string()),
+    weekOf: v.string(),
+    published: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    const weekOfTs = new Date(args.weekOf + "T00:00:00Z").getTime();
+    const data = {
+      name: args.name,
+      tagline: args.tagline,
+      story: args.story,
+      imageUrl: args.imageUrl,
+      link: args.link,
+      weekOf: args.weekOf,
+      weekOfTs,
+      published: args.published,
+      updatedAt: now,
+    };
+    if (args.id) {
+      await ctx.db.patch(args.id, data);
+      return { id: String(args.id) };
+    }
+    const id = await ctx.db.insert("changeMakers", { ...data, createdAt: now });
+    return { id: String(id) };
+  },
+});
+
+export const deleteChangeMaker = mutationGeneric({
+  args: { id: v.id("changeMakers") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+    return { ok: true };
+  },
+});

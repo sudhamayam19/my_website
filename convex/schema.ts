@@ -111,6 +111,21 @@ export default defineSchema({
     updatedAt: v.string(),
   }).index("by_date", ["date"]),
 
+  changeMakers: defineTable({
+    name: v.string(),
+    tagline: v.string(),
+    story: v.string(),
+    imageUrl: v.optional(v.string()),
+    link: v.optional(v.string()),
+    weekOf: v.string(),
+    weekOfTs: v.number(),
+    published: v.boolean(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_weekOfTs", ["weekOfTs"])
+    .index("by_published_weekOfTs", ["published", "weekOfTs"]),
+
   mediaAppearances: defineTable({
     title: v.string(),
     outlet: v.string(),         // e.g. "Deccan Chronicle", "Radio Mirchi"
