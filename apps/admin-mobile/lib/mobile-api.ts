@@ -395,3 +395,15 @@ export async function fetchSubscribers(): Promise<NewsletterSubscriber[]> {
   });
   return data.subscribers;
 }
+
+export interface GeminiPart { text: string }
+export interface GeminiMessage { role: "user" | "model"; parts: GeminiPart[] }
+export interface GeminiTodo { id: string; text: string; dueDate?: string; completed: boolean }
+
+export async function sendGeminiChat(messages: GeminiMessage[], todos: GeminiTodo[]): Promise<string> {
+  const data = await apiRequest<{ text: string }>("/api/mobile/gemini-chat", {
+    method: "POST",
+    body: JSON.stringify({ messages, todos }),
+  });
+  return data.text;
+}
