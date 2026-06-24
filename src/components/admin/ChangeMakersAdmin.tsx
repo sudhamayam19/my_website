@@ -138,7 +138,7 @@ export function ChangeMakersAdmin() {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this Change Maker?")) return;
+    if (!confirm("Delete this person?")) return;
     await fetch(`/api/admin/changemakers/${id}`, { method: "DELETE", credentials: "same-origin" });
     setItems((prev) => prev.filter((i) => i._id !== id));
   };
@@ -153,7 +153,7 @@ export function ChangeMakersAdmin() {
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="display-font text-3xl font-bold text-[#1f2d39]">Change Makers</h1>
+          <h1 className="display-font text-3xl font-bold text-[#1f2d39]">The Better Us</h1>
           <p className="text-sm text-[#5f6f79] mt-1">One person per week who changed the world</p>
         </div>
         <button
@@ -166,7 +166,7 @@ export function ChangeMakersAdmin() {
 
       {showForm && (
         <div className="rounded-2xl border border-[#d3c1a8] bg-[#fffaf2] p-6 space-y-4">
-          <h2 className="font-bold text-[#1f2d39]">{form.id ? "Edit" : "New"} Change Maker</h2>
+          <h2 className="font-bold text-[#1f2d39]">{form.id ? "Edit" : "New"} Person</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-1.5">
@@ -228,7 +228,7 @@ export function ChangeMakersAdmin() {
         <p className="text-sm text-[#8fa3ad] py-6">Loading…</p>
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#d3c1a8] bg-[#fffaf2] px-6 py-12 text-center">
-          <p className="text-[#8fa3ad]">No change makers yet. Add the first one above!</p>
+          <p className="text-[#8fa3ad]">No entries yet. Add the first one above!</p>
         </div>
       ) : (
         <div className="space-y-2">

@@ -16,9 +16,9 @@ export function ChangeMakerSpotlight({ items }: Props) {
         {/* Header */}
         <div className="mb-8">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#2a6670]">Weekly spotlight</p>
-          <h2 className="display-font mt-2 text-4xl font-bold text-[#1f2d39] sm:text-5xl">Change Makers</h2>
+          <h2 className="display-font mt-2 text-4xl font-bold text-[#1f2d39] sm:text-5xl">The Better Us</h2>
           <p className="mt-2 text-sm text-[#60717b] max-w-xl">
-            One person per week who changed the world — stories of courage, vision, and impact.
+            One person per week who brought out the best in humanity — stories of courage, vision, and lasting change.
           </p>
         </div>
 

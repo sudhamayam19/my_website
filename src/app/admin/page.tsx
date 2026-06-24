@@ -123,7 +123,7 @@ export default async function AdminDashboardPage() {
           <section className="editorial-card mt-8 p-6 sm:p-8">
             <h2 className="display-font mb-5 text-2xl font-bold text-[#1f2d39]">Quick Links</h2>
             <div className="flex flex-wrap gap-3">
-              <Link href="/admin/changemakers" className="rounded-full border border-[#d3c1a8] bg-[#fffaf2] px-4 py-2 text-sm font-bold text-[#1f6973] hover:border-[#1f6973] transition">✨ Change Makers</Link>
+              <Link href="/admin/changemakers" className="rounded-full border border-[#d3c1a8] bg-[#fffaf2] px-4 py-2 text-sm font-bold text-[#1f6973] hover:border-[#1f6973] transition">✨ The Better Us</Link>
               <Link href="/admin/media" className="rounded-full border border-[#d3c1a8] bg-[#fffaf2] px-4 py-2 text-sm font-bold text-[#1f6973] hover:border-[#1f6973] transition">🎙️ Media & Press</Link>
               <Link href="/admin/podcasts/new" className="rounded-full border border-[#d3c1a8] bg-[#fffaf2] px-4 py-2 text-sm font-bold text-[#1f6973] hover:border-[#1f6973] transition">🎧 New Episode</Link>
               <Link href="/admin/posts/new" className="rounded-full border border-[#d3c1a8] bg-[#fffaf2] px-4 py-2 text-sm font-bold text-[#1f6973] hover:border-[#1f6973] transition">✏️ New Post</Link>
