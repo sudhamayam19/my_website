@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import * as React from "react";
 import { getHomeNav } from "@/components/AuthNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -28,7 +29,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
   event:   { bg: "#fff0f5", text: "#8b1a4a", border: "#e8a8c0" },
 };
 
-const CATEGORY_ICONS: Record<string, JSX.Element> = {
+const CATEGORY_ICONS: Record<string, React.ReactElement> = {
   tv: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>,
   radio: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3.24 6.15C2.51 6.43 2 7.17 2 8v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8c0-.83-.51-1.57-1.24-1.85L12 2 3.24 6.15zM7 17a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm10-7H7V8h10v2z"/></svg>,
   print: <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v4H1v8h2v4h18v-4h2v-8h-2V5c0-1.1-.9-2-2-2zm0 16H5v-4h14v4zm2-6H3v-4h18v4zM5 5h14v4H5V5z"/></svg>,
