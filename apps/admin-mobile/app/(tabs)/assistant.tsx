@@ -51,6 +51,8 @@ const C = {
   white:      "#ffffff",
   green:      "#2d7a4a",
   greenLight: "#edf7f1",
+  orange:     "#c85a2a",
+  orangeLight:"#fdf0e8",
 };
 
 interface Msg {
@@ -58,15 +60,31 @@ interface Msg {
   content: string;
 }
 
-const HISTORY_KEY = "gemini_chat_history_v1";
+const HISTORY_KEY = "tillu_chat_history_v1";
 
-const WELCOME: Msg = {
-  role: "assistant",
-  content:
-    "Namaste Sudha! I'm your AI workflow assistant, powered by Gemini.\n\n" +
-    "I can help you plan your content calendar, suggest blog topics, podcast ideas, and keep track of your to-dos.\n\n" +
-    "Try saying something like: *'Remind me to record episode 5 this Saturday'* or *'Give me 3 ideas for my next blog post'*.",
-};
+function getTilluWelcome(): string {
+  const hour = new Date().getHours();
+  const day = new Date().toLocaleDateString("en-IN", { weekday: "long", timeZone: "Asia/Kolkata" });
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  if (day === "Monday") {
+    return `${greeting} Amma! 🤖✨ Tillu ikkade unna!\n\nMonday anthe — weekly content plan chesukodaniki perfect time! This week enti raayabothunnam? 📝\n\nCricket, culture, or something from the heart? Cheppandi!`;
+  }
+  return `${greeting} Amma! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo! ✨`;
+}
+
+// ── Tillu mascot avatar ───────────────────────────────────────────────────────
+function TilluAvatar({ size = 36 }: { size?: number }) {
+  return (
+    <View style={{
+      width: size, height: size, borderRadius: size / 2,
+      backgroundColor: C.teal, alignItems: "center", justifyContent: "center",
+      borderWidth: 2, borderColor: C.tealLight,
+    }}>
+      <Text style={{ fontSize: size * 0.5 }}>🤖</Text>
+    </View>
+  );
+}
 
 // ── Animated thinking dots ────────────────────────────────────────────────────
 function ThinkingDots() {
@@ -76,10 +94,13 @@ function ThinkingDots() {
     return () => clearInterval(t);
   }, []);
   return (
-    <View style={[S.bubble, S.aiBubble, { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 14 }]}>
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={[S.dot, frame > i && { backgroundColor: C.teal }]} />
-      ))}
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <TilluAvatar size={28} />
+      <View style={[S.bubble, S.aiBubble, { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 14 }]}>
+        {[0, 1, 2].map((i) => (
+          <View key={i} style={[S.dot, frame > i && { backgroundColor: C.teal }]} />
+        ))}
+      </View>
     </View>
   );
 }
@@ -93,21 +114,28 @@ function Bubble({ msg, index, onSpeak, speaking }: {
   const isUser = msg.role === "user";
   return (
     <View style={{ alignItems: isUser ? "flex-end" : "flex-start" }}>
-      <View style={[S.bubble, isUser ? S.userBubble : S.aiBubble]}>
-        {isUser
-          ? <Text style={[S.bubbleText, { color: C.white }]}>{msg.content}</Text>
-          : <Markdown style={mdStyle}>{msg.content}</Markdown>
-        }
-      </View>
       {!isUser && (
-        <Pressable style={S.speakBtn} onPress={() => onSpeak(msg.content, index)} hitSlop={10}>
-          <Ionicons
-            name={speaking === index ? "stop-circle-outline" : "volume-medium-outline"}
-            size={13}
-            color={C.slate}
-          />
-          <Text style={S.speakText}>{speaking === index ? "Stop" : "Listen"}</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+          <TilluAvatar size={28} />
+          <View>
+            <View style={[S.bubble, S.aiBubble]}>
+              <Markdown style={mdStyle}>{msg.content}</Markdown>
+            </View>
+            <Pressable style={S.speakBtn} onPress={() => onSpeak(msg.content, index)} hitSlop={10}>
+              <Ionicons
+                name={speaking === index ? "stop-circle-outline" : "volume-medium-outline"}
+                size={13}
+                color={C.slate}
+              />
+              <Text style={S.speakText}>{speaking === index ? "Stop" : "Listen"}</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+      {isUser && (
+        <View style={[S.bubble, S.userBubble]}>
+          <Text style={[S.bubbleText, { color: C.white }]}>{msg.content}</Text>
+        </View>
       )}
     </View>
   );
@@ -119,8 +147,9 @@ function TodoRow({ todo, onToggle, onDelete }: {
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const isPinned = todo.text.startsWith("📌");
   return (
-    <View style={S.todoRow}>
+    <View style={[S.todoRow, isPinned && { borderColor: C.teal, backgroundColor: C.tealLight }]}>
       <Pressable onPress={() => onToggle(todo.id)} style={S.checkbox} hitSlop={8}>
         {todo.completed
           ? <Ionicons name="checkmark-circle" size={22} color={C.teal} />
@@ -140,18 +169,37 @@ function TodoRow({ todo, onToggle, onDelete }: {
   );
 }
 
+// ── Overdue banner ────────────────────────────────────────────────────────────
+function OverdueBanner({ count, onPress }: { count: number; onPress: () => void }) {
+  if (count === 0) return null;
+  return (
+    <Pressable onPress={onPress} style={S.overdueBanner}>
+      <Ionicons name="alert-circle" size={16} color={C.orange} />
+      <Text style={S.overdueText}>
+        {count} overdue task{count > 1 ? "s" : ""} — Tillu wants to help! 👆
+      </Text>
+    </Pressable>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function AssistantTab() {
   const insets = useSafeAreaInsets();
-  const [view, setView]       = useState<"chat" | "tasks">("chat");
-  const [msgs, setMsgs]       = useState<Msg[]>([WELCOME]);
-  const [todos, setTodos]     = useState<Todo[]>([]);
-  const [input, setInput]     = useState("");
-  const [sending, setSending] = useState(false);
+  const [view, setView]         = useState<"chat" | "tasks">("chat");
+  const [msgs, setMsgs]         = useState<Msg[]>([{ role: "assistant", content: getTilluWelcome() }]);
+  const [todos, setTodos]       = useState<Todo[]>([]);
+  const [input, setInput]       = useState("");
+  const [sending, setSending]   = useState(false);
   const [speaking, setSpeaking] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
-  const [newTask, setNewTask] = useState("");
+  const [newTask, setNewTask]   = useState("");
   const scrollRef = useRef<ScrollView>(null);
+
+  const overdueTodos = todos.filter(t => {
+    if (t.completed || !t.dueDate) return false;
+    const d = new Date(t.dueDate);
+    return !isNaN(d.getTime()) && d < new Date();
+  });
 
   useEffect(() => {
     void AsyncStorage.getItem(HISTORY_KEY).then((raw) => {
@@ -187,7 +235,7 @@ export default function AssistantTab() {
 
     try {
       const geminiHistory: GeminiMessage[] = history
-        .filter((m) => m.content !== WELCOME.content)
+        .filter((m) => m.content !== getTilluWelcome())
         .slice(-14)
         .map((m) => ({
           role: m.role === "assistant" ? "model" : "user",
@@ -206,7 +254,7 @@ export default function AssistantTab() {
     } catch (e) {
       setMsgs((prev) => [
         ...prev,
-        { role: "assistant", content: e instanceof Error ? `Error: ${e.message}` : "Something went wrong. Please try again." },
+        { role: "assistant", content: e instanceof Error ? `Arey! Error vachindi: ${e.message} 😅 Try cheyyi again!` : "Network issue unna! Try again Amma 🙏" },
       ]);
     } finally {
       setSending(false);
@@ -261,22 +309,28 @@ export default function AssistantTab() {
     setNewTask("");
   };
 
-  const clearChat = () => Alert.alert("Clear Chat", "Delete all conversation history?", [
+  const clearChat = () => Alert.alert("Clear Chat", "Start fresh with Tillu?", [
     { text: "Cancel", style: "cancel" },
     { text: "Clear", style: "destructive", onPress: async () => {
       await AsyncStorage.removeItem(HISTORY_KEY);
-      setMsgs([WELCOME]);
+      setMsgs([{ role: "assistant", content: getTilluWelcome() }]);
     }},
   ]);
+
+  const askTilluAboutOverdue = () => {
+    const overdueNames = overdueTodos.map(t => t.text).join(", ");
+    void send(`Tillu, I have ${overdueTodos.length} overdue task(s): ${overdueNames}. Help me!`);
+    setView("chat");
+  };
 
   const pendingCount = todos.filter((t) => !t.completed).length;
 
   const QUICK_PROMPTS = [
-    "Give me 3 blog post ideas for this week",
-    "Suggest a podcast episode topic",
+    "Kohli article ideas cheppandi! 🏏",
+    "This week content plan cheyyi",
+    "3 podcast topics suggest cheyyi",
+    "Telugu culture article ideas?",
     "What should I work on today?",
-    "Write a quick Instagram caption idea",
-    "Help me plan my content calendar",
   ];
 
   return (
@@ -284,8 +338,8 @@ export default function AssistantTab() {
       style={{ flex: 1, backgroundColor: C.paper }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* ── Header ── */}
-      <View style={[S.header, { paddingTop: insets.top + 10 }]}>
+      {/* ── Tillu Header ── */}
+      <View style={[S.header, { paddingTop: insets.top + 8 }]}>
         <View style={{ flexDirection: "row", gap: 0 }}>
           <Pressable
             onPress={() => setView("chat")}
@@ -299,16 +353,19 @@ export default function AssistantTab() {
           >
             <Text style={[S.viewTabText, view === "tasks" && S.viewTabTextActive]}>Tasks</Text>
             {pendingCount > 0 && (
-              <View style={S.badge}>
+              <View style={[S.badge, overdueTodos.length > 0 && { backgroundColor: C.orange }]}>
                 <Text style={S.badgeText}>{pendingCount}</Text>
               </View>
             )}
           </Pressable>
         </View>
 
-        <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
-          <View style={S.onlineDot} />
-          <Text style={S.onlineText}>Gemini</Text>
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+          <TilluAvatar size={32} />
+          <View>
+            <Text style={S.tilluName}>Tillu</Text>
+            <Text style={S.tilluSub}>AI Creative Buddy</Text>
+          </View>
           {view === "chat" && (
             <Pressable onPress={clearChat} hitSlop={12}>
               <Ionicons name="create-outline" size={20} color={C.teal} />
@@ -316,6 +373,11 @@ export default function AssistantTab() {
           )}
         </View>
       </View>
+
+      {/* ── Overdue banner ── */}
+      {overdueTodos.length > 0 && (
+        <OverdueBanner count={overdueTodos.length} onPress={askTilluAboutOverdue} />
+      )}
 
       {/* ── Chat view ── */}
       {view === "chat" && (
@@ -353,7 +415,7 @@ export default function AssistantTab() {
               style={S.input}
               value={input}
               onChangeText={setInput}
-              placeholder={listening ? "Listening…" : "Ask anything…"}
+              placeholder={listening ? "Tillu listening… 👂" : "Tillu tho maatladandi…"}
               placeholderTextColor={listening ? C.teal : C.slateLight}
               multiline
               maxLength={1000}
@@ -415,23 +477,37 @@ export default function AssistantTab() {
             contentContainerStyle={S.taskList}
             keyboardShouldPersistTaps="handled"
           >
+            {overdueTodos.length > 0 && (
+              <>
+                <Text style={[S.sectionLabel, { color: C.orange }]}>⚠️ Overdue</Text>
+                {overdueTodos.map((t) => (
+                  <TodoRow key={t.id} todo={t} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
+                ))}
+              </>
+            )}
+
+            {todos.filter((t) => !t.completed && !overdueTodos.includes(t)).length > 0 && (
+              <>
+                {overdueTodos.length > 0 && <Text style={S.sectionLabel}>Pending</Text>}
+                {todos.filter((t) => !t.completed && !overdueTodos.includes(t)).map((t) => (
+                  <TodoRow key={t.id} todo={t} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
+                ))}
+              </>
+            )}
+
             {todos.length === 0 && (
               <View style={S.emptyTasks}>
-                <Text style={{ fontSize: 36, marginBottom: 12 }}>✅</Text>
-                <Text style={S.emptyTitle}>No tasks yet</Text>
+                <Text style={{ fontSize: 36, marginBottom: 12 }}>🤖</Text>
+                <Text style={S.emptyTitle}>Tillu ready!</Text>
                 <Text style={S.emptySub}>
-                  Tell the AI about something you want to do, and it will add it here automatically.
+                  Tell me what you want to do and I'll remember it for you, Amma! ✨
                 </Text>
               </View>
             )}
 
-            {todos.filter((t) => !t.completed).map((t) => (
-              <TodoRow key={t.id} todo={t} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
-            ))}
-
             {todos.some((t) => t.completed) && (
               <>
-                <Text style={S.sectionLabel}>Completed</Text>
+                <Text style={S.sectionLabel}>✅ Completed</Text>
                 {todos.filter((t) => t.completed).map((t) => (
                   <TodoRow key={t.id} todo={t} onToggle={handleToggleTodo} onDelete={handleDeleteTodo} />
                 ))}
@@ -446,42 +522,44 @@ export default function AssistantTab() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S = StyleSheet.create({
-  header:       { backgroundColor: C.paper, borderBottomWidth: 1, borderBottomColor: C.sandLight, paddingHorizontal: 16, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  viewTab:      { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, marginRight: 4 },
-  viewTabActive:{ backgroundColor: C.tealLight },
-  viewTabText:  { fontSize: 14, fontWeight: "700", color: C.slateLight },
+  header:         { backgroundColor: C.paper, borderBottomWidth: 1, borderBottomColor: C.sandLight, paddingHorizontal: 16, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  viewTab:        { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, marginRight: 4 },
+  viewTabActive:  { backgroundColor: C.tealLight },
+  viewTabText:    { fontSize: 14, fontWeight: "700", color: C.slateLight },
   viewTabTextActive: { color: C.teal },
-  badge:        { backgroundColor: C.teal, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
-  badgeText:    { fontSize: 10, fontWeight: "800", color: C.white },
-  onlineDot:    { width: 7, height: 7, borderRadius: 4, backgroundColor: "#3dba6e" },
-  onlineText:   { fontSize: 11, fontWeight: "700", color: C.slateLight },
-  msgList:      { padding: 14, gap: 12, paddingBottom: 10 },
-  bubble:       { maxWidth: "84%", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10 },
-  userBubble:   { alignSelf: "flex-end", backgroundColor: C.teal, borderBottomRightRadius: 5 },
-  aiBubble:     { alignSelf: "flex-start", backgroundColor: C.white, borderWidth: 1, borderColor: C.sandLight, borderBottomLeftRadius: 5 },
-  bubbleText:   { fontSize: 14, lineHeight: 22 },
-  speakBtn:     { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, marginLeft: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, backgroundColor: C.cream, borderWidth: 1, borderColor: C.sandLight },
-  speakText:    { fontSize: 11, color: C.slate, fontWeight: "600" },
-  dot:          { width: 7, height: 7, borderRadius: 4, backgroundColor: C.sandLight },
-  promptRow:    { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
-  promptChip:   { backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.sand, paddingHorizontal: 14, paddingVertical: 9 },
-  promptText:   { fontSize: 12, color: C.teal, fontWeight: "600" },
-  inputBar:     { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.sandLight, backgroundColor: C.paper },
-  input:        { flex: 1, backgroundColor: C.cream, borderRadius: 22, borderWidth: 1, borderColor: C.sand, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.ink, maxHeight: 110, lineHeight: 20 },
-  iconBtn:      { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  sendBtn:      { width: 42, height: 42, borderRadius: 21, backgroundColor: C.teal, alignItems: "center", justifyContent: "center" },
-  addTaskBar:   { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.sandLight, backgroundColor: C.paper },
-  addTaskInput: { flex: 1, backgroundColor: C.cream, borderRadius: 20, borderWidth: 1, borderColor: C.sand, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.ink },
-  taskList:     { padding: 14, gap: 8, paddingBottom: 30 },
-  todoRow:      { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.white, borderRadius: 14, borderWidth: 1, borderColor: C.sandLight, paddingHorizontal: 14, paddingVertical: 12 },
-  checkbox:     { alignItems: "center", justifyContent: "center" },
-  todoText:     { fontSize: 14, color: C.ink, fontWeight: "600", flexWrap: "wrap" },
-  todoStrike:   { textDecorationLine: "line-through", color: C.slateLight, fontWeight: "400" },
-  todoDue:      { fontSize: 11, color: C.slateLight, marginTop: 2 },
-  sectionLabel: { fontSize: 11, fontWeight: "800", color: C.slateLight, textTransform: "uppercase", letterSpacing: 1, marginTop: 8, marginBottom: 2 },
-  emptyTasks:   { alignItems: "center", paddingTop: 60, paddingHorizontal: 32 },
-  emptyTitle:   { fontSize: 18, fontWeight: "800", color: C.ink, marginBottom: 8 },
-  emptySub:     { fontSize: 13, color: C.slateLight, textAlign: "center", lineHeight: 20 },
+  badge:          { backgroundColor: C.teal, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
+  badgeText:      { fontSize: 10, fontWeight: "800", color: C.white },
+  tilluName:      { fontSize: 13, fontWeight: "800", color: C.ink },
+  tilluSub:       { fontSize: 10, color: C.slateLight, fontWeight: "600" },
+  overdueBanner:  { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.orangeLight, borderBottomWidth: 1, borderBottomColor: "#f0c8a8", paddingHorizontal: 16, paddingVertical: 10 },
+  overdueText:    { fontSize: 12, fontWeight: "700", color: C.orange, flex: 1 },
+  msgList:        { padding: 14, gap: 14, paddingBottom: 10 },
+  bubble:         { maxWidth: "82%", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10 },
+  userBubble:     { alignSelf: "flex-end", backgroundColor: C.teal, borderBottomRightRadius: 5 },
+  aiBubble:       { alignSelf: "flex-start", backgroundColor: C.white, borderWidth: 1, borderColor: C.sandLight, borderBottomLeftRadius: 5 },
+  bubbleText:     { fontSize: 14, lineHeight: 22 },
+  speakBtn:       { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, marginLeft: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, backgroundColor: C.cream, borderWidth: 1, borderColor: C.sandLight },
+  speakText:      { fontSize: 11, color: C.slate, fontWeight: "600" },
+  dot:            { width: 7, height: 7, borderRadius: 4, backgroundColor: C.sandLight },
+  promptRow:      { paddingHorizontal: 12, paddingVertical: 8, gap: 8 },
+  promptChip:     { backgroundColor: C.white, borderRadius: 20, borderWidth: 1, borderColor: C.sand, paddingHorizontal: 14, paddingVertical: 9 },
+  promptText:     { fontSize: 12, color: C.teal, fontWeight: "600" },
+  inputBar:       { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: C.sandLight, backgroundColor: C.paper },
+  input:          { flex: 1, backgroundColor: C.cream, borderRadius: 22, borderWidth: 1, borderColor: C.sand, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: C.ink, maxHeight: 110, lineHeight: 20 },
+  iconBtn:        { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  sendBtn:        { width: 42, height: 42, borderRadius: 21, backgroundColor: C.teal, alignItems: "center", justifyContent: "center" },
+  addTaskBar:     { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: C.sandLight, backgroundColor: C.paper },
+  addTaskInput:   { flex: 1, backgroundColor: C.cream, borderRadius: 20, borderWidth: 1, borderColor: C.sand, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: C.ink },
+  taskList:       { padding: 14, gap: 8, paddingBottom: 30 },
+  todoRow:        { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: C.white, borderRadius: 14, borderWidth: 1, borderColor: C.sandLight, paddingHorizontal: 14, paddingVertical: 12 },
+  checkbox:       { alignItems: "center", justifyContent: "center" },
+  todoText:       { fontSize: 14, color: C.ink, fontWeight: "600", flexWrap: "wrap" },
+  todoStrike:     { textDecorationLine: "line-through", color: C.slateLight, fontWeight: "400" },
+  todoDue:        { fontSize: 11, color: C.slateLight, marginTop: 2 },
+  sectionLabel:   { fontSize: 11, fontWeight: "800", color: C.slateLight, textTransform: "uppercase", letterSpacing: 1, marginTop: 8, marginBottom: 2 },
+  emptyTasks:     { alignItems: "center", paddingTop: 60, paddingHorizontal: 32 },
+  emptyTitle:     { fontSize: 18, fontWeight: "800", color: C.ink, marginBottom: 8 },
+  emptySub:       { fontSize: 13, color: C.slateLight, textAlign: "center", lineHeight: 20 },
 });
 
 const mdStyle = {
