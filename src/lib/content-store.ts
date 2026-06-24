@@ -599,7 +599,11 @@ export interface ChangeMaker {
 export async function getChangeMakers(publishedOnly = false): Promise<ChangeMaker[]> {
   const client = getConvexClient();
   if (!client) return [];
-  return await client.query(api.content.listChangeMakers, { publishedOnly });
+  try {
+    return await client.query(api.content.listChangeMakers, { publishedOnly });
+  } catch {
+    return [];
+  }
 }
 
 export async function upsertChangeMaker(input: {
@@ -639,7 +643,11 @@ export interface MediaAppearance {
 export async function getMediaAppearances(): Promise<MediaAppearance[]> {
   const client = getConvexClient();
   if (!client) return [];
-  return await client.query(api.content.listMediaAppearances, {});
+  try {
+    return await client.query(api.content.listMediaAppearances, {});
+  } catch {
+    return [];
+  }
 }
 
 export async function upsertMediaAppearance(input: {
