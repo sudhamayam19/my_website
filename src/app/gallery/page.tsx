@@ -10,11 +10,24 @@ export const metadata: Metadata = {
   description: "Photos from Sudha Devarakonda's journey — radio studios, interviews, events and more.",
 };
 
-// Add photos here — just paste the URL and a caption
 type Photo = { src: string; caption?: string; category?: string };
 const photos: Photo[] = [
-  // { src: "https://...", caption: "At Radio Mirchi Studio, 2018", category: "Radio" },
-  // Photos coming soon — send them to be added!
+  { src: "/gallery/photo-1.jpg" },
+  { src: "/gallery/photo-2.jpg" },
+  { src: "/gallery/photo-3.jpg" },
+  { src: "/gallery/photo-4.jpg" },
+  { src: "/gallery/photo-5.jpg" },
+  { src: "/gallery/photo-6.jpg" },
+  { src: "/gallery/photo-7.jpg" },
+  { src: "/gallery/photo-8.jpg" },
+  { src: "/gallery/photo-9.jpg" },
+  { src: "/gallery/photo-10.jpg" },
+  { src: "/gallery/photo-11.jpg" },
+  { src: "/gallery/photo-12.jpg" },
+  { src: "/gallery/photo-13.jpg" },
+  { src: "/gallery/photo-14.jpg" },
+  { src: "/gallery/photo-15.jpg" },
+  { src: "/gallery/photo-16.jpg" },
 ];
 
 export default async function GalleryPage() {
