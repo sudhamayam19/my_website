@@ -56,7 +56,7 @@ export function ChangeMakerSpotlight({ items }: Props) {
               <h3 className="display-font text-3xl font-bold text-[#1f2d39] sm:text-4xl">{current.name}</h3>
               <p className="mt-2 text-base font-semibold text-[#2a6670]">{current.tagline}</p>
 
-              <p className="mt-4 text-sm leading-relaxed text-[#4f5f69] line-clamp-6 whitespace-pre-line">
+              <p className="mt-4 text-sm leading-relaxed text-[#4f5f69] whitespace-pre-line">
                 {current.story}
               </p>
 
