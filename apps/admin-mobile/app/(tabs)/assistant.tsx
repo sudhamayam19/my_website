@@ -24,8 +24,6 @@ import {
   addTodo,
   deleteTodo,
   loadTodos,
-  parseTodoMarker,
-  stripTodoMarker,
   toggleTodo,
 } from "../../lib/todos";
 
@@ -196,17 +194,14 @@ export default function AssistantTab() {
           parts: [{ text: m.content }],
         }));
 
-      const raw = await sendGeminiChat(geminiHistory, todos);
+      const result = await sendGeminiChat(geminiHistory, todos);
 
-      const marker = parseTodoMarker(raw);
-      const displayText = stripTodoMarker(raw);
-
-      if (marker) {
-        const newTodo = await addTodo(marker.text, marker.dueDate);
+      if (result.todo) {
+        const newTodo = await addTodo(result.todo.text, result.todo.dueDate);
         setTodos((prev) => [newTodo, ...prev]);
       }
 
-      const aiMsg: Msg = { role: "assistant", content: displayText };
+      const aiMsg: Msg = { role: "assistant", content: result.text };
       setMsgs((prev) => [...prev, aiMsg]);
     } catch (e) {
       setMsgs((prev) => [
@@ -234,7 +229,7 @@ export default function AssistantTab() {
   const speakMsg = (text: string, i: number) => {
     if (speaking === i) { Speech.stop(); setSpeaking(null); }
     else {
-      Speech.speak(stripTodoMarker(text), {
+      Speech.speak(text, {
         language: "en-IN",
         onDone: () => setSpeaking(null),
         onError: () => setSpeaking(null),
