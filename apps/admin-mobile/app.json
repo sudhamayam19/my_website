@@ -2,6 +2,7 @@
   "expo": {
     "name": "Sudha Admin",
     "slug": "sudha-admin-mobile",
+    "owner": "sudhamayam",
     "scheme": "sudhaadmin",
     "version": "1.0.0",
     "icon": "../../image.png",
