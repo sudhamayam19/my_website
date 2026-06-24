@@ -399,7 +399,12 @@ export async function fetchSubscribers(): Promise<NewsletterSubscriber[]> {
 export interface GeminiPart { text: string }
 export interface GeminiMessage { role: "user" | "model"; parts: GeminiPart[] }
 export interface GeminiTodo { id: string; text: string; dueDate?: string; completed: boolean }
-export interface GeminiChatResult { text: string; todo?: { text: string; dueDate?: string } }
+export interface GeminiChatResult {
+  text: string;
+  todo?: { text: string; dueDate?: string };
+  weekTopic?: string;
+  ideas?: string[];
+}
 
 export async function sendGeminiChat(messages: GeminiMessage[], todos: GeminiTodo[]): Promise<GeminiChatResult> {
   return await apiRequest<GeminiChatResult>("/api/mobile/gemini-chat", {
