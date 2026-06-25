@@ -8,9 +8,10 @@ type GeminiPart = GeminiTextPart | GeminiFunctionCallPart | GeminiFunctionRespon
 interface GeminiMessage { role: "user" | "model"; parts: GeminiPart[] }
 interface Todo { id: string; text: string; dueDate?: string; completed: boolean }
 
-const MODEL = "gemini-2.0-flash";
-const API_URL = (key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
+const PRIMARY_MODEL  = "gemini-3.5-flash";
+const FALLBACK_MODEL = "gemini-3.1-pro";
+const API_URL = (key: string, model: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
 const TILLU_PROMPT = `You are Tillu 🤖 — Sudha Devarakonda's personal AI creative buddy and workflow agent!
 
@@ -91,18 +92,29 @@ type GeminiResponse = {
   error?: { message: string };
 };
 
+function isOverloaded(data: GeminiResponse): boolean {
+  const msg = data.error?.message ?? "";
+  return msg.toLowerCase().includes("high demand") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("try again later");
+}
+
 async function callGemini(apiKey: string, systemText: string, contents: GeminiMessage[], includeTools = true): Promise<GeminiResponse> {
-  const res = await fetch(API_URL(apiKey), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: systemText }] },
-      contents,
-      ...(includeTools ? { tools: TOOLS } : {}),
-      generationConfig: { temperature: 0.8, maxOutputTokens: 1024 },
-    }),
+  const body = JSON.stringify({
+    system_instruction: { parts: [{ text: systemText }] },
+    contents,
+    ...(includeTools ? { tools: TOOLS } : {}),
+    generationConfig: { temperature: 0.8, maxOutputTokens: 1024 },
   });
-  return res.json() as Promise<GeminiResponse>;
+
+  // Try primary model first, fallback on overload
+  const res = await fetch(API_URL(apiKey, PRIMARY_MODEL), { method: "POST", headers: { "Content-Type": "application/json" }, body });
+  const data = await res.json() as GeminiResponse;
+
+  if (isOverloaded(data)) {
+    const res2 = await fetch(API_URL(apiKey, FALLBACK_MODEL), { method: "POST", headers: { "Content-Type": "application/json" }, body });
+    return res2.json() as Promise<GeminiResponse>;
+  }
+
+  return data;
 }
 
 export async function POST(req: Request) {
