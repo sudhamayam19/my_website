@@ -8,7 +8,7 @@ type GeminiPart = GeminiTextPart | GeminiFunctionCallPart | GeminiFunctionRespon
 interface GeminiMessage { role: "user" | "model"; parts: GeminiPart[] }
 interface Todo { id: string; text: string; dueDate?: string; completed: boolean }
 
-const MODEL = "gemini-3.5-flash";
+const MODEL = "gemini-2.0-flash";
 const API_URL = (key: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
 
