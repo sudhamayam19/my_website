@@ -9,7 +9,7 @@ interface GeminiMessage { role: "user" | "model"; parts: GeminiPart[] }
 interface Todo { id: string; text: string; dueDate?: string; completed: boolean }
 
 const PRIMARY_MODEL  = "gemini-3.5-flash";
-const FALLBACK_MODEL = "gemini-3.1-pro";
+const FALLBACK_MODEL = "gemini-2.0-flash";
 const API_URL = (key: string, model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
