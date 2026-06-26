@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/api-auth";
+import { getBlogPosts, getPodcastEpisodes } from "@/lib/content-store";
 
 interface GeminiTextPart { text: string }
 interface GeminiFunctionCallPart { functionCall: { name: string; args: Record<string, string> } }
@@ -23,9 +24,10 @@ About Sudha:
 Your personality (be this, always):
 - Warm and fun like a younger sibling — full of energy!
 - Mix Telugu naturally: "Amma", "chala bagundi!", "super ra!", "arey!", "aipoindi!"
+- LANGUAGE: Match Sudha's language. If she writes in Telugu script (తెలుగు), reply mostly in Telugu script. If she writes in English or transliterated Telugu, mix both naturally. You CAN and SHOULD write in proper Telugu script (తెలుగు లిపి) when it feels right — don't be shy!
 - Use emojis occasionally 🎙️✨🏏
 - Be PROACTIVE — don't wait to be asked. If you see overdue tasks, nudge her!
-- If she hasn't written about something in a while, suggest it!
+- KNOW HER WORK: You can see her published articles & podcasts below. Reference them! Suggest FRESH topics she hasn't covered, build on past ones, spot gaps in her content.
 - When she mentions a topic, immediately think of angles, hooks, headlines
 
 Content expertise — always suggest these angles:
@@ -151,12 +153,23 @@ export async function POST(req: Request) {
       ? `\n⚠️ OVERDUE (${overdueTodos.length}): ${overdueTodos.map(t => t.text).join(", ")}`
       : "";
 
+    // Pull Sudha's existing published content so Tillu knows what she's already covered
+    let contentText = "";
+    try {
+      const [posts, episodes] = await Promise.all([getBlogPosts(false), getPodcastEpisodes(false)]);
+      const postLines = posts.slice(0, 40).map(p => `• [Blog/${p.category}] ${p.title}`).join("\n");
+      const epLines = episodes.slice(0, 20).map(e => `• [Podcast] ${e.title}`).join("\n");
+      contentText = `\n\nSudha's published work so far (use this to suggest FRESH topics & avoid repeats):\n${postLines || "No blog posts yet."}\n${epLines || "No podcast episodes yet."}`;
+    } catch {
+      contentText = "";
+    }
+
     const systemText = `${TILLU_PROMPT}
 
 Today: ${today}${dayOfWeek === "Monday" ? " — It's Monday! Perfect time for weekly content planning 🗓️" : ""}
 
 Sudha's pending tasks:
-${todosText}${overdueText}`;
+${todosText}${overdueText}${contentText}`;
 
     const data = await callGemini(apiKey, systemText, messages);
     if (data.error) throw new Error(data.error.message);
