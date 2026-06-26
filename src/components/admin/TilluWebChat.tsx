@@ -139,7 +139,7 @@ export function TilluWebChat() {
       )}
 
       {/* Input */}
-      <div className="border-t border-[#e8dece] bg-[#fffaf3] px-4 py-3 flex gap-2 items-end">
+      <div className="border-t border-[#e8dece] bg-[#fffaf3] px-4 py-3 pr-20 flex gap-2 items-end">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
