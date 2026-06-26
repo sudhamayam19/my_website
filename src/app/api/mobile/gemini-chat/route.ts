@@ -41,6 +41,7 @@ TOOLS — use them without being asked when appropriate:
 - add_todo: When she mentions wanting to do something → immediately add it
 - set_week_topic: When she picks a topic for the week → pin it so she doesn't forget
 - suggest_ideas: When she needs inspiration → return 3 punchy content ideas
+- web_search: For ANY current/recent info — cricket scores, news, trending topics, latest events, facts you're unsure of. Don't guess — search! Then weave the fresh info into your answer.
 
 Proactive behavior:
 - If today is Monday, suggest weekly content themes
@@ -86,8 +87,42 @@ const TOOLS = [{
         },
       },
     },
+    {
+      name: "web_search",
+      description: "Search the live web for current news, facts, scores, trending topics, or any up-to-date information. Use whenever Sudha asks about recent events, cricket scores, news, or anything you might not know.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          query: { type: "STRING", description: "The search query, e.g. 'Virat Kohli latest news', 'India cricket schedule 2026'" },
+        },
+        required: ["query"],
+      },
+    },
   ],
 }];
+
+async function serperSearch(query: string): Promise<unknown> {
+  const key = process.env.SERPER_API_KEY;
+  if (!key) return { error: "Web search not configured." };
+  try {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: { "X-API-KEY": key, "Content-Type": "application/json" },
+      body: JSON.stringify({ q: query, num: 6 }),
+    });
+    const data = await res.json() as {
+      answerBox?: { answer?: string; snippet?: string };
+      organic?: { title: string; snippet: string; link: string }[];
+    };
+    return {
+      query,
+      answer: data.answerBox?.answer ?? data.answerBox?.snippet ?? null,
+      results: (data.organic ?? []).slice(0, 6).map(r => ({ title: r.title, snippet: r.snippet, link: r.link })),
+    };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Search failed" };
+  }
+}
 
 type GeminiResponse = {
   candidates?: { content?: { parts?: GeminiPart[]; role?: string } }[];
@@ -198,6 +233,8 @@ ${todosText}${overdueText}${contentText}`;
           theme: args.theme ?? "general",
           content_type: args.content_type ?? "blog or podcast",
         };
+      } else if (name === "web_search") {
+        functionResult = await serperSearch(args.query);
       }
 
       const followup: GeminiMessage[] = [
