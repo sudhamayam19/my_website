@@ -19,7 +19,6 @@ import {
   View,
 } from "react-native";
 import Animated, {
-  cancelAnimation,
   Easing,
   useAnimatedStyle,
   useSharedValue,
@@ -83,137 +82,38 @@ function getTilluWelcome(): string {
   return `${greeting} Akka! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo! ✨`;
 }
 
-// ── Tillu animated mascot ─────────────────────────────────────────────────────
-function TilluBot({ size = 36, speaking = false }: { size?: number; speaking?: boolean }) {
-  const bobY      = useSharedValue(0);
-  const blinkSY   = useSharedValue(1);
-  const mouthH    = useSharedValue(size * 0.07);
-  const antGlow   = useSharedValue(0.5);
+// ── Tillu mascot (desi sprite poses with idle bob) ────────────────────────────
+type TilluPose = "idle" | "wave" | "mic" | "idea";
+const TILLU_SPRITES: Record<TilluPose, ReturnType<typeof require>> = {
+  idle: require("../../assets/tillu/tillu-idle.png"),
+  wave: require("../../assets/tillu/tillu-wave.png"),
+  mic:  require("../../assets/tillu/tillu-mic.png"),
+  idea: require("../../assets/tillu/tillu-idea.png"),
+};
 
-  // idle bob + antenna pulse (mount once)
+function TilluBot({ size = 36, speaking = false, pose }: { size?: number; speaking?: boolean; pose?: TilluPose }) {
+  const bobY = useSharedValue(0);
+
   useEffect(() => {
     bobY.value = withRepeat(
       withSequence(
-        withTiming(-size * 0.055, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
-        withTiming( size * 0.055, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-size * 0.05, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
+        withTiming( size * 0.05, { duration: 1300, easing: Easing.inOut(Easing.ease) }),
       ),
       -1, true,
     );
-    antGlow.value = withRepeat(
-      withSequence(
-        withTiming(1,   { duration: 800 }),
-        withTiming(0.3, { duration: 800 }),
-      ),
-      -1, true,
-    );
-    const t = setInterval(() => {
-      blinkSY.value = withSequence(
-        withTiming(0.06, { duration: 70 }),
-        withTiming(1,    { duration: 120 }),
-      );
-    }, 2800 + Math.random() * 1600);
-    return () => clearInterval(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // mouth animation driven by speaking prop
-  useEffect(() => {
-    if (speaking) {
-      mouthH.value = withRepeat(
-        withSequence(
-          withTiming(size * 0.19, { duration: 190 }),
-          withTiming(size * 0.06, { duration: 190 }),
-        ),
-        -1, true,
-      );
-    } else {
-      cancelAnimation(mouthH);
-      mouthH.value = withTiming(size * 0.07, { duration: 130 });
-    }
-  }, [speaking, size, mouthH]);
-
-  const bobStyle   = useAnimatedStyle(() => ({ transform: [{ translateY: bobY.value }] }));
-  const blinkStyle = useAnimatedStyle(() => ({ transform: [{ scaleY: blinkSY.value }] }));
-  const mouthStyle = useAnimatedStyle(() => ({ height: mouthH.value }));
-  const antStyle   = useAnimatedStyle(() => ({ opacity: antGlow.value }));
-
-  const head   = size * 0.70;
-  const eye    = size * 0.16;
-  const pupil  = size * 0.075;
-  const mouth  = size * 0.34;
-  const antB   = Math.max(size * 0.10, 3);
-  const antS   = size * 0.13;
+  const bobStyle = useAnimatedStyle(() => ({ transform: [{ translateY: bobY.value }] }));
+  const activePose: TilluPose = pose ?? (speaking ? "idea" : "idle");
 
   return (
-    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "flex-end" }}>
-      {/* Antenna */}
-      <View style={{ position: "absolute", top: 0, alignItems: "center" }}>
-        <Animated.View style={[antStyle, {
-          width: antB, height: antB, borderRadius: antB / 2,
-          backgroundColor: "#f5c34a",
-          shadowColor: "#f5c34a", shadowOpacity: 0.9, shadowRadius: 4,
-        }]} />
-        <View style={{ width: 2, height: antS, backgroundColor: "rgba(255,255,255,0.45)" }} />
-      </View>
-
-      {/* Head */}
-      <Animated.View style={[bobStyle, {
-        width: head, height: head,
-        borderRadius: head * 0.28,
-        backgroundColor: C.teal,
-        alignItems: "center", justifyContent: "center",
-        shadowColor: C.teal,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.38, shadowRadius: 7,
-        elevation: 5,
-      }]}>
-        {/* Inner faceplate */}
-        <View style={{
-          width: head * 0.78, height: head * 0.72,
-          borderRadius: head * 0.18,
-          backgroundColor: "rgba(255,255,255,0.11)",
-          alignItems: "center", justifyContent: "center",
-        }}>
-          {/* Eyes */}
-          <View style={{ flexDirection: "row", gap: eye * 0.65, marginBottom: eye * 0.35 }}>
-            {[0, 1].map((i) => (
-              <View key={i} style={{
-                width: eye, height: eye, borderRadius: eye / 2,
-                backgroundColor: "white",
-                alignItems: "center", justifyContent: "center",
-              }}>
-                <Animated.View style={[blinkStyle, {
-                  width: pupil, height: pupil, borderRadius: pupil / 2,
-                  backgroundColor: "#0c2830",
-                }]} />
-              </View>
-            ))}
-          </View>
-
-          {/* Mouth */}
-          <Animated.View style={[mouthStyle, {
-            width: mouth, borderRadius: size * 0.04,
-            backgroundColor: "rgba(255,255,255,0.62)",
-          }]} />
-        </View>
-
-        {/* Tiny circuit dots bottom-left */}
-        {size >= 30 && (
-          <View style={{
-            position: "absolute", bottom: head * 0.1, left: head * 0.1,
-            flexDirection: "row", gap: 3,
-          }}>
-            {[1, 0.5, 0.8].map((o, i) => (
-              <View key={i} style={{
-                width: Math.max(size * 0.05, 3), height: Math.max(size * 0.05, 3),
-                borderRadius: size * 0.025,
-                backgroundColor: `rgba(255,255,255,${o * 0.28})`,
-              }} />
-            ))}
-          </View>
-        )}
-      </Animated.View>
-    </View>
+    <Animated.Image
+      source={TILLU_SPRITES[activePose]}
+      resizeMode="contain"
+      style={[bobStyle, { width: size, height: size }]}
+    />
   );
 }
 
@@ -226,7 +126,7 @@ function ThinkingDots() {
   }, []);
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-      <TilluBot size={28} speaking />
+      <TilluBot size={32} pose="idea" />
       <View style={[S.bubble, S.aiBubble, { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 14 }]}>
         {[0, 1, 2].map((i) => (
           <View key={i} style={[S.dot, frame > i && { backgroundColor: C.teal }]} />
@@ -510,7 +410,7 @@ export default function AssistantTab() {
         </View>
 
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-          <TilluBot size={32} speaking={sending} />
+          <TilluBot size={40} pose={listening ? "mic" : sending ? "idea" : "idle"} />
           <View>
             <Text style={S.tilluName}>Tillu</Text>
             <Text style={S.tilluSub}>AI Creative Buddy</Text>
@@ -646,7 +546,7 @@ export default function AssistantTab() {
 
             {todos.length === 0 && (
               <View style={S.emptyTasks}>
-                <TilluBot size={72} />
+                <TilluBot size={96} pose="wave" />
                 <Text style={S.emptyTitle}>Tillu ready!</Text>
                 <Text style={S.emptySub}>
                   Tell me what you want to do and I'll remember it for you, Akka! ✨
