@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { TilluLiveCall } from "./TilluLiveCall";
 
 type TilluPose = "idle" | "wave" | "mic" | "idea";
 function TilluImg({ pose, size }: { pose: TilluPose; size: number }) {
@@ -61,6 +62,7 @@ export function TilluWebChat() {
   const [copied, setCopied] = useState<number | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [calling, setCalling] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceModeRef = useRef(false);
@@ -255,6 +257,7 @@ export function TilluWebChat() {
 
   return (
     <div className="flex h-screen flex-col bg-[#fffaf3]">
+      {calling && <TilluLiveCall onClose={() => setCalling(false)} />}
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#e8dece] bg-[#fffaf3] px-5 py-4">
         <div className="flex h-12 w-12 items-center justify-center">
@@ -267,14 +270,21 @@ export function TilluWebChat() {
           </p>
         </div>
         <button
+          onClick={() => setCalling(true)}
+          className="ml-auto rounded-full bg-[#1f6973] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#185860] transition"
+          title="Real Gemini Live voice call"
+        >
+          📞 Call Tillu
+        </button>
+        <button
           onClick={toggleVoiceMode}
-          className={`ml-auto rounded-full px-3 py-1.5 text-xs font-bold transition ${
+          className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
             voiceMode
               ? "bg-[#c85a2a] text-white animate-pulse"
               : "border border-[#1f6973] text-[#1f6973] hover:bg-[#e8f4f5]"
           }`}
         >
-          {voiceMode ? (speaking ? "🔊 Tillu maatladtundi…" : listening ? "🎙️ Vintunna…" : "🎙️ Live ON") : "🎙️ Talk Live"}
+          {voiceMode ? (speaking ? "🔊 maatladtundi…" : listening ? "🎙️ Vintunna…" : "🎙️ Live ON") : "🎙️ Talk Live"}
         </button>
         <button
           onClick={newChat}
