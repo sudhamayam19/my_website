@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 interface Msg { role: "user" | "assistant"; text: string }
 interface GeminiMsg { role: "user" | "model"; parts: [{ text: string }] }
 
-const WELCOME = `Good day! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo! ✨`;
+const WELCOME = `Good day Akka! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo Akka! ✨`;
 
 const CURRENT_KEY = "tillu_web_current_v1";
 const MEMORY_KEY  = "tillu_web_memory_v1";   // compact list of past ideas/topics
@@ -43,6 +43,7 @@ export function TilluWebChat() {
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
   const [memory, setMemory] = useState<string[]>([]);
+  const [copied, setCopied] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
 
@@ -162,6 +163,14 @@ export function TilluWebChat() {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
   };
 
+  const copyMsg = async (text: string, i: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(i);
+      setTimeout(() => setCopied((c) => (c === i ? null : c)), 1500);
+    } catch { /* clipboard blocked */ }
+  };
+
   return (
     <div className="flex h-screen flex-col bg-[#fffaf3]">
       {/* Header */}
@@ -192,14 +201,34 @@ export function TilluWebChat() {
                 🤖
               </div>
             )}
-            <div
-              className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                m.role === "user"
-                  ? "rounded-br-sm bg-[#1f6973] text-white"
-                  : "rounded-bl-sm border border-[#e8dece] bg-white text-[#1f2d39]"
-              }`}
-            >
-              {m.text}
+            <div className="max-w-[78%]">
+              <div
+                className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                  m.role === "user"
+                    ? "rounded-br-sm bg-[#1f6973] text-white"
+                    : "rounded-bl-sm border border-[#e8dece] bg-white text-[#1f2d39]"
+                }`}
+              >
+                {m.text}
+              </div>
+              {m.role === "assistant" && m.text !== WELCOME && (
+                <button
+                  onClick={() => void copyMsg(m.text, i)}
+                  className="mt-1 ml-1 inline-flex items-center gap-1 rounded-full border border-[#e8dece] bg-[#f7efe4] px-2.5 py-1 text-[11px] font-semibold text-[#5f6f79] hover:border-[#1f6973] hover:text-[#1f6973] transition"
+                >
+                  {copied === i ? (
+                    <>✓ Copied</>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      Copy script
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         ))}

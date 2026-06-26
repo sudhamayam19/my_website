@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Clipboard from "expo-clipboard";
 import Markdown from "react-native-markdown-display";
 import * as Notifications from "expo-notifications";
 import * as Speech from "expo-speech";
@@ -77,9 +78,9 @@ function getTilluWelcome(): string {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   if (day === "Monday") {
-    return `${greeting} Amma! 🤖✨ Tillu ikkade unna!\n\nMonday anthe — weekly content plan chesukodaniki perfect time! This week enti raayabothunnam? 📝\n\nCricket, culture, or something from the heart? Cheppandi!`;
+    return `${greeting} Akka! 🤖✨ Tillu ikkade unna!\n\nMonday anthe — weekly content plan chesukodaniki perfect time! This week enti raayabothunnam? 📝\n\nCricket, culture, or something from the heart? Cheppandi!`;
   }
-  return `${greeting} Amma! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo! ✨`;
+  return `${greeting} Akka! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo! ✨`;
 }
 
 // ── Tillu animated mascot ─────────────────────────────────────────────────────
@@ -242,6 +243,14 @@ function Bubble({ msg, index, onSpeak, speaking }: {
   speaking: number | null;
 }) {
   const isUser = msg.role === "user";
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    await Clipboard.setStringAsync(msg.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   return (
     <View style={{ alignItems: isUser ? "flex-end" : "flex-start" }}>
       {!isUser && (
@@ -251,14 +260,24 @@ function Bubble({ msg, index, onSpeak, speaking }: {
             <View style={[S.bubble, S.aiBubble]}>
               <Markdown style={mdStyle}>{msg.content}</Markdown>
             </View>
-            <Pressable style={S.speakBtn} onPress={() => onSpeak(msg.content, index)} hitSlop={10}>
-              <Ionicons
-                name={speaking === index ? "stop-circle-outline" : "volume-medium-outline"}
-                size={13}
-                color={C.slate}
-              />
-              <Text style={S.speakText}>{speaking === index ? "Stop" : "Listen"}</Text>
-            </Pressable>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <Pressable style={S.speakBtn} onPress={() => onSpeak(msg.content, index)} hitSlop={10}>
+                <Ionicons
+                  name={speaking === index ? "stop-circle-outline" : "volume-medium-outline"}
+                  size={13}
+                  color={C.slate}
+                />
+                <Text style={S.speakText}>{speaking === index ? "Stop" : "Listen"}</Text>
+              </Pressable>
+              <Pressable style={S.speakBtn} onPress={() => void copy()} hitSlop={10}>
+                <Ionicons
+                  name={copied ? "checkmark-circle-outline" : "copy-outline"}
+                  size={13}
+                  color={copied ? C.teal : C.slate}
+                />
+                <Text style={[S.speakText, copied && { color: C.teal }]}>{copied ? "Copied" : "Copy"}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       )}
@@ -384,7 +403,7 @@ export default function AssistantTab() {
     } catch (e) {
       setMsgs((prev) => [
         ...prev,
-        { role: "assistant", content: e instanceof Error ? `Arey! Error vachindi: ${e.message} 😅 Try cheyyi again!` : "Network issue unna! Try again Amma 🙏" },
+        { role: "assistant", content: e instanceof Error ? `Arey! Error vachindi: ${e.message} 😅 Try cheyyi again!` : "Network issue unna! Try again Akka 🙏" },
       ]);
     } finally {
       setSending(false);
@@ -630,7 +649,7 @@ export default function AssistantTab() {
                 <TilluBot size={72} />
                 <Text style={S.emptyTitle}>Tillu ready!</Text>
                 <Text style={S.emptySub}>
-                  Tell me what you want to do and I'll remember it for you, Amma! ✨
+                  Tell me what you want to do and I'll remember it for you, Akka! ✨
                 </Text>
               </View>
             )}

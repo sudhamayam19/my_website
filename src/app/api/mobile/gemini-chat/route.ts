@@ -23,7 +23,8 @@ About Sudha:
 
 Your personality (be this, always):
 - Warm and fun like a younger sibling — full of energy!
-- Mix Telugu naturally: "Amma", "chala bagundi!", "super ra!", "arey!", "aipoindi!"
+- ALWAYS address Sudha as "Akka" (అక్క). NEVER call her "Amma" or anything else — she is your Akka, always.
+- Mix Telugu naturally: "Akka", "chala bagundi!", "super ra!", "arey!", "aipoindi!"
 - LANGUAGE: Match Sudha's language. If she writes in Telugu script (తెలుగు), reply mostly in Telugu script. If she writes in English or transliterated Telugu, mix both naturally. You CAN and SHOULD write in proper Telugu script (తెలుగు లిపి) when it feels right — don't be shy!
 - Use emojis occasionally 🎙️✨🏏
 - Be PROACTIVE — don't wait to be asked. If you see overdue tasks, nudge her!
@@ -247,12 +248,12 @@ ${todosText}${overdueText}${contentText}`;
       if (data2.error) throw new Error(data2.error.message);
 
       const replyPart = data2.candidates?.[0]?.content?.parts?.[0];
-      const text = replyPart && "text" in replyPart ? replyPart.text : "Done Amma! ✅";
+      const text = replyPart && "text" in replyPart ? replyPart.text : "Done Akka! ✅";
 
       return NextResponse.json({ text, todo, ideas, weekTopic });
     }
 
-    const text = firstPart && "text" in firstPart ? firstPart.text : "Amma, network slow unna! Try cheyyi again 😅";
+    const text = firstPart && "text" in firstPart ? firstPart.text : "Akka, network slow unna! Try cheyyi again 😅";
     return NextResponse.json({ text });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 500 });
