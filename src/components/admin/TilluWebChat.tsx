@@ -59,8 +59,12 @@ export function TilluWebChat() {
   const [listening, setListening] = useState(false);
   const [memory, setMemory] = useState<string[]>([]);
   const [copied, setCopied] = useState<number | null>(null);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceModeRef = useRef(false);
+  const sendRef = useRef<((override?: string, speak?: boolean) => Promise<void>) | null>(null);
 
   // Load persisted chat + memory on mount
   useEffect(() => {
@@ -97,7 +101,7 @@ export function TilluWebChat() {
     });
   };
 
-  const send = async (override?: string) => {
+  const send = async (override?: string, speakReply = false) => {
     const text = (override ?? input).trim();
     if (!text || sending) return;
     setInput("");
@@ -132,10 +136,9 @@ export function TilluWebChat() {
         body: JSON.stringify({ messages: history, todos: [] }),
       });
       const data = await res.json() as { text?: string; error?: string };
-      setMsgs((prev) => [...prev, {
-        role: "assistant",
-        text: data.text ?? (data.error ? `Error: ${data.error}` : "Something went wrong 😅"),
-      }]);
+      const reply = data.text ?? (data.error ? `Error: ${data.error}` : "Something went wrong 😅");
+      setMsgs((prev) => [...prev, { role: "assistant", text: reply }]);
+      if (speakReply) speak(reply);
     } catch (e) {
       setMsgs((prev) => [...prev, {
         role: "assistant",
@@ -143,6 +146,70 @@ export function TilluWebChat() {
       }]);
     } finally {
       setSending(false);
+    }
+  };
+  sendRef.current = send;
+
+  // Speak text aloud; when in voice mode, resume listening after Tillu finishes
+  const speak = (raw: string) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const clean = raw
+      .replace(/[*#_`>]/g, "")
+      .replace(/\p{Extended_Pictographic}/gu, "")
+      .replace(/\n{2,}/g, ". ")
+      .trim();
+    if (!clean) { if (voiceModeRef.current) startVoiceListen(); return; }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = "en-IN";
+    const voices = window.speechSynthesis.getVoices();
+    const indian = voices.find((v) => /en-IN|hi-IN|te-IN/i.test(v.lang));
+    if (indian) u.voice = indian;
+    u.rate = 1.02;
+    u.pitch = 1.1;
+    u.onstart = () => setSpeaking(true);
+    u.onend = () => { setSpeaking(false); if (voiceModeRef.current) startVoiceListen(); };
+    u.onerror = () => { setSpeaking(false); if (voiceModeRef.current) startVoiceListen(); };
+    window.speechSynthesis.speak(u);
+  };
+
+  // One listen cycle for hands-free voice mode → auto-sends final transcript
+  const startVoiceListen = () => {
+    if (!voiceModeRef.current) return;
+    const rec = getSpeechRecognition();
+    if (!rec) return;
+    rec.lang = "en-IN";
+    rec.interimResults = true;
+    rec.continuous = false;
+    let finalText = "";
+    rec.onresult = (e) => {
+      finalText = Array.from({ length: e.results.length }, (_, i) => e.results[i][0].transcript).join("");
+      setInput(finalText);
+    };
+    rec.onend = () => {
+      setListening(false);
+      const t = finalText.trim();
+      if (t && voiceModeRef.current) { setInput(""); void sendRef.current?.(t, true); }
+      else if (voiceModeRef.current) { startVoiceListen(); } // heard nothing, keep listening
+    };
+    rec.onerror = () => setListening(false);
+    recRef.current = rec;
+    try { rec.start(); setListening(true); } catch { /* already started */ }
+  };
+
+  const toggleVoiceMode = () => {
+    const next = !voiceMode;
+    setVoiceMode(next);
+    voiceModeRef.current = next;
+    if (next) {
+      const rec = getSpeechRecognition();
+      if (!rec) { alert("Voice not supported in this browser. Try Chrome."); setVoiceMode(false); voiceModeRef.current = false; return; }
+      startVoiceListen();
+    } else {
+      recRef.current?.stop();
+      window.speechSynthesis?.cancel();
+      setListening(false);
+      setSpeaking(false);
     }
   };
 
@@ -200,8 +267,18 @@ export function TilluWebChat() {
           </p>
         </div>
         <button
+          onClick={toggleVoiceMode}
+          className={`ml-auto rounded-full px-3 py-1.5 text-xs font-bold transition ${
+            voiceMode
+              ? "bg-[#c85a2a] text-white animate-pulse"
+              : "border border-[#1f6973] text-[#1f6973] hover:bg-[#e8f4f5]"
+          }`}
+        >
+          {voiceMode ? (speaking ? "🔊 Tillu maatladtundi…" : listening ? "🎙️ Vintunna…" : "🎙️ Live ON") : "🎙️ Talk Live"}
+        </button>
+        <button
           onClick={newChat}
-          className="ml-auto rounded-full border border-[#d3c1a8] px-3 py-1.5 text-xs font-bold text-[#455964] hover:border-[#1f6973] hover:text-[#1f6973] transition"
+          className="rounded-full border border-[#d3c1a8] px-3 py-1.5 text-xs font-bold text-[#455964] hover:border-[#1f6973] hover:text-[#1f6973] transition"
         >
           New chat
         </button>
