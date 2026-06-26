@@ -207,54 +207,58 @@ Today: ${today}${dayOfWeek === "Monday" ? " — It's Monday! Perfect time for we
 Sudha's pending tasks:
 ${todosText}${overdueText}${contentText}`;
 
-    const data = await callGemini(apiKey, systemText, messages);
-    if (data.error) throw new Error(data.error.message);
+    // Side-effects collected across tool calls, returned to the client
+    let todo: { text: string; dueDate?: string } | undefined;
+    let weekTopic: string | undefined;
 
-    const firstPart = data.candidates?.[0]?.content?.parts?.[0];
-
-    if (firstPart && "functionCall" in firstPart) {
-      const { name, args } = firstPart.functionCall;
-
-      let todo: { text: string; dueDate?: string } | undefined;
-      let ideas: string[] | undefined;
-      let weekTopic: string | undefined;
-      let functionResult: unknown;
-
+    function runTool(name: string, args: Record<string, string>): Promise<unknown> | unknown {
       if (name === "add_todo") {
         todo = { text: args.text, dueDate: args.due_date };
-        functionResult = { added: true, text: args.text, due_date: args.due_date ?? null };
-      } else if (name === "set_week_topic") {
+        return { added: true, text: args.text, due_date: args.due_date ?? null, note: "Confirm warmly AND continue helping — give her useful detail, don't just say 'done'." };
+      }
+      if (name === "set_week_topic") {
         weekTopic = args.topic;
         todo = { text: `📌 This week: ${args.topic}${args.content_type ? ` (${args.content_type})` : ""}`, dueDate: "Sunday" };
-        functionResult = { set: true, topic: args.topic };
-      } else if (name === "suggest_ideas") {
-        functionResult = {
-          generated: true,
-          note: "Please respond with exactly 3 creative ideas as numbered list. Keep each idea punchy — headline + one sentence hook.",
-          theme: args.theme ?? "general",
-          content_type: args.content_type ?? "blog or podcast",
-        };
-      } else if (name === "web_search") {
-        functionResult = await serperSearch(args.query);
+        return { set: true, topic: args.topic, note: "Topic pinned. Now ALSO give her a real plan — suggest angles, episodes, or a content outline for this topic. Never reply with just 'done'." };
       }
-
-      const followup: GeminiMessage[] = [
-        ...messages,
-        { role: "model", parts: [firstPart] },
-        { role: "user", parts: [{ functionResponse: { name, response: functionResult } }] },
-      ];
-
-      const data2 = await callGemini(apiKey, systemText, followup, false);
-      if (data2.error) throw new Error(data2.error.message);
-
-      const replyPart = data2.candidates?.[0]?.content?.parts?.[0];
-      const text = replyPart && "text" in replyPart ? replyPart.text : "Done Akka! ✅";
-
-      return NextResponse.json({ text, todo, ideas, weekTopic });
+      if (name === "suggest_ideas") {
+        return { generated: true, theme: args.theme ?? "general", content_type: args.content_type ?? "blog or podcast", note: "Respond with exactly 3 punchy ideas as a numbered list — headline + one-sentence hook each." };
+      }
+      if (name === "web_search") {
+        return serperSearch(args.query);
+      }
+      return { error: `Unknown tool ${name}` };
     }
 
-    const text = firstPart && "text" in firstPart ? firstPart.text : "Akka, network slow unna! Try cheyyi again 😅";
-    return NextResponse.json({ text });
+    // Multi-step tool loop: keep tools enabled, execute calls, feed results back, until text reply
+    const convo: GeminiMessage[] = [...messages];
+    let finalText = "";
+
+    for (let step = 0; step < 5; step++) {
+      const resp = await callGemini(apiKey, systemText, convo, true);
+      if (resp.error) throw new Error(resp.error.message);
+
+      const parts = resp.candidates?.[0]?.content?.parts ?? [];
+      const callParts = parts.filter((p): p is { functionCall: { name: string; args: Record<string, string> } } => "functionCall" in p);
+      const textPart = parts.find((p) => "text" in p) as { text: string } | undefined;
+
+      if (callParts.length === 0) {
+        finalText = textPart?.text ?? "";
+        break;
+      }
+
+      // Echo the model's function-call turn, then append each tool result
+      convo.push({ role: "model", parts: callParts });
+      const responseParts: GeminiPart[] = [];
+      for (const cp of callParts) {
+        const result = await runTool(cp.functionCall.name, cp.functionCall.args);
+        responseParts.push({ functionResponse: { name: cp.functionCall.name, response: result } });
+      }
+      convo.push({ role: "user", parts: responseParts });
+    }
+
+    if (!finalText) finalText = "Akka, oka sari try cheyyi again — Tillu ready! 🤖";
+    return NextResponse.json({ text: finalText, todo, weekTopic });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 500 });
   }
