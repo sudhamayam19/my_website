@@ -60,13 +60,15 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   };
 
   const start = async () => {
-    // 1. Get an ephemeral token from our server
+    // 1. Get an ephemeral token + system instruction from our server
     let token = "";
+    let systemInstruction = "";
     try {
       const res = await fetch("/api/mobile/tillu-live-token", { method: "POST", credentials: "same-origin" });
-      const data = await res.json() as { token?: string; error?: string };
+      const data = await res.json() as { token?: string; systemInstruction?: string; error?: string };
       if (!data.token) throw new Error(data.error ?? "No token");
       token = data.token;
+      systemInstruction = data.systemInstruction ?? "";
     } catch (e) {
       setError(e instanceof Error ? e.message : "Token error");
       setState("error");
@@ -87,11 +89,12 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      // Send setup (model + audio response)
+      // Send setup (model + audio response + Tillu's system instruction)
       ws.send(JSON.stringify({
         setup: {
           model: MODEL,
           generationConfig: { responseModalities: ["AUDIO"] },
+          ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
         },
       }));
       startMic();

@@ -51,19 +51,8 @@ export async function POST(req: Request) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uses: 1,
-          expireTime,
-          newSessionExpireTime,
-          liveConnectConstraints: {
-            model: LIVE_MODEL,
-            config: {
-              responseModalities: ["AUDIO"],
-              temperature: 0.9,
-              systemInstruction: { parts: [{ text: systemInstruction }] },
-            },
-          },
-        }),
+        // Plain token — model + system instruction are sent in the WS setup message
+        body: JSON.stringify({ uses: 1, expireTime, newSessionExpireTime }),
       },
     );
 
@@ -75,7 +64,7 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ token: data.name, model: LIVE_MODEL });
+    return NextResponse.json({ token: data.name, model: LIVE_MODEL, systemInstruction });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Token failed" }, { status: 500 });
   }
