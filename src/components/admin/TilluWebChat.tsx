@@ -1,6 +1,21 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+
+type TilluPose = "idle" | "wave" | "mic" | "idea";
+function TilluImg({ pose, size }: { pose: TilluPose; size: number }) {
+  return (
+    <Image
+      src={`/tillu/tillu-${pose}.png`}
+      alt="Tillu"
+      width={size}
+      height={size}
+      priority={pose === "wave"}
+      style={{ objectFit: "contain" }}
+    />
+  );
+}
 
 interface Msg { role: "user" | "assistant"; text: string }
 interface GeminiMsg { role: "user" | "model"; parts: [{ text: string }] }
@@ -175,8 +190,8 @@ export function TilluWebChat() {
     <div className="flex h-screen flex-col bg-[#fffaf3]">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-[#e8dece] bg-[#fffaf3] px-5 py-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1f6973] text-xl shadow">
-          🤖
+        <div className="flex h-12 w-12 items-center justify-center">
+          <TilluImg pose={listening ? "mic" : sending ? "idea" : "idle"} size={48} />
         </div>
         <div>
           <p className="text-base font-bold text-[#1f2d39]">Tillu</p>
@@ -197,8 +212,8 @@ export function TilluWebChat() {
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start gap-2.5"}`}>
             {m.role === "assistant" && (
-              <div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1f6973] text-sm">
-                🤖
+              <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center">
+                <TilluImg pose={i === 0 ? "wave" : "idle"} size={32} />
               </div>
             )}
             <div className="max-w-[78%]">
@@ -235,7 +250,9 @@ export function TilluWebChat() {
 
         {sending && (
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1f6973] text-sm">🤖</div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center">
+              <TilluImg pose="idea" size={32} />
+            </div>
             <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-[#e8dece] bg-white px-4 py-3">
               {[0, 1, 2].map((i) => (
                 <span key={i} className="inline-block h-2 w-2 animate-bounce rounded-full bg-[#1f6973]"
