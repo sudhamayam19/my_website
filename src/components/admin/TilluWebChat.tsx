@@ -7,6 +7,9 @@ interface GeminiMsg { role: "user" | "model"; parts: [{ text: string }] }
 
 const WELCOME = `Good day! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo! ✨`;
 
+const CURRENT_KEY = "tillu_web_current_v1";
+const MEMORY_KEY  = "tillu_web_memory_v1";   // compact list of past ideas/topics
+
 const QUICK_PROMPTS = [
   "Kohli article ideas cheppandi! 🏏",
   "This week content plan cheyyi",
@@ -15,29 +18,92 @@ const QUICK_PROMPTS = [
   "What should I work on today?",
 ];
 
+// Minimal browser SpeechRecognition typings
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+  stop: () => void;
+  onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+}
+
+function getSpeechRecognition(): SpeechRecognitionLike | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+  const Ctor = w.SpeechRecognition || w.webkitSpeechRecognition;
+  return Ctor ? new Ctor() : null;
+}
+
 export function TilluWebChat() {
   const [msgs, setMsgs] = useState<Msg[]>([{ role: "assistant", text: WELCOME }]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [memory, setMemory] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
+
+  // Load persisted chat + memory on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CURRENT_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Msg[];
+        if (saved.length > 0) setMsgs(saved);
+      }
+      const mem = localStorage.getItem(MEMORY_KEY);
+      if (mem) setMemory(JSON.parse(mem) as string[]);
+    } catch { /* ignore corrupt */ }
+  }, []);
+
+  // Persist current chat whenever it changes
+  useEffect(() => {
+    if (msgs.length > 0) {
+      localStorage.setItem(CURRENT_KEY, JSON.stringify(msgs.slice(-100)));
+    }
+  }, [msgs]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, sending]);
+
+  // Add a user prompt to compact memory (deduped, capped)
+  const rememberIdea = (text: string) => {
+    setMemory((prev) => {
+      const clean = text.trim();
+      if (!clean || prev.includes(clean)) return prev;
+      const updated = [...prev, clean].slice(-60); // keep last 60 ideas
+      localStorage.setItem(MEMORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const send = async (override?: string) => {
     const text = (override ?? input).trim();
     if (!text || sending) return;
     setInput("");
     setSending(true);
+    rememberIdea(text);
 
     const next: Msg[] = [...msgs, { role: "user", text }];
     setMsgs(next);
 
-    const history: GeminiMsg[] = next
+    // Build history; prepend a compact memory turn so Tillu recalls past ideas
+    const history: GeminiMsg[] = [];
+    if (memory.length > 0) {
+      history.push({
+        role: "user",
+        parts: [{ text: `[MEMORY — topics & ideas we've worked on before, remember these]:\n${memory.map((m) => `• ${m}`).join("\n")}` }],
+      });
+      history.push({ role: "model", parts: [{ text: "గుర్తుపెట్టుకున్నాను Akka! 🧠 I remember all of these." }] });
+    }
+    next
       .filter((m) => m.text !== WELCOME)
       .slice(-14)
-      .map((m) => ({
+      .forEach((m) => history.push({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.text }],
       }));
@@ -64,6 +130,34 @@ export function TilluWebChat() {
     }
   };
 
+  // Start a fresh chat — keeps MEMORY, only clears the visible thread
+  const newChat = () => {
+    setMsgs([{ role: "assistant", text: WELCOME }]);
+    localStorage.removeItem(CURRENT_KEY);
+  };
+
+  const toggleMic = () => {
+    if (listening) {
+      recRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const rec = getSpeechRecognition();
+    if (!rec) { alert("Voice input not supported in this browser. Try Chrome."); return; }
+    rec.lang = "en-IN";
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.onresult = (e) => {
+      const transcript = Array.from({ length: e.results.length }, (_, i) => e.results[i][0].transcript).join("");
+      setInput(transcript);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    recRef.current = rec;
+    rec.start();
+    setListening(true);
+  };
+
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); }
   };
@@ -77,10 +171,12 @@ export function TilluWebChat() {
         </div>
         <div>
           <p className="text-base font-bold text-[#1f2d39]">Tillu</p>
-          <p className="text-xs font-semibold text-[#8fa3ad]">AI Creative Buddy</p>
+          <p className="text-xs font-semibold text-[#8fa3ad]">
+            AI Creative Buddy{memory.length > 0 ? ` · 🧠 ${memory.length} ideas remembered` : ""}
+          </p>
         </div>
         <button
-          onClick={() => setMsgs([{ role: "assistant", text: WELCOME }])}
+          onClick={newChat}
           className="ml-auto rounded-full border border-[#d3c1a8] px-3 py-1.5 text-xs font-bold text-[#455964] hover:border-[#1f6973] hover:text-[#1f6973] transition"
         >
           New chat
@@ -144,12 +240,27 @@ export function TilluWebChat() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKey}
-          placeholder="Tillu tho maatladandi…"
+          placeholder={listening ? "Listening… 🎤 maatladandi" : "Tillu tho maatladandi…"}
           rows={1}
           disabled={sending}
           className="flex-1 resize-none rounded-2xl border border-[#d3c1a8] bg-[#f7efe4] px-4 py-2.5 text-sm text-[#1f2d39] placeholder-[#8fa3ad] outline-none focus:border-[#1f6973] disabled:opacity-60 max-h-32"
           style={{ lineHeight: "1.5" }}
         />
+        {/* Mic / dictate button */}
+        <button
+          onClick={toggleMic}
+          title="Dictate"
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${
+            listening ? "bg-[#c85a2a] text-white animate-pulse" : "border border-[#d3c1a8] text-[#1f6973] hover:border-[#1f6973]"
+          }`}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        </button>
         <button
           onClick={() => void send()}
           disabled={!input.trim() || sending}
