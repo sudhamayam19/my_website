@@ -144,9 +144,10 @@ export function TilluWebChat() {
         credentials: "same-origin",
         body: JSON.stringify({ messages: history, todos: [] }),
       });
-      const data = await res.json() as { text?: string; error?: string };
+      const data = await res.json() as { text?: string; error?: string; savedDraft?: { id: string; title: string } };
       const reply = data.text ?? friendlyError(data.error);
-      setMsgs((prev) => [...prev, { role: "assistant", text: reply }]);
+      const draftNote = data.savedDraft ? `\n\n📝 Draft saved: "${data.savedDraft.title}" → review it in Admin → Posts.` : "";
+      setMsgs((prev) => [...prev, { role: "assistant", text: reply + draftNote }]);
       if (speakReply) speak(reply);
     } catch {
       setMsgs((prev) => [...prev, { role: "assistant", text: "Arey Akka, network slow unna 😅 Oka sari try cheyyi!" }]);

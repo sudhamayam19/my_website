@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/api-auth";
-import { getBlogPosts, getPodcastEpisodes } from "@/lib/content-store";
+import { getBlogPosts, getPodcastEpisodes, createPost } from "@/lib/content-store";
 
 interface GeminiTextPart { text: string }
 interface GeminiInlineDataPart { inlineData: { mimeType: string; data: string } }
@@ -44,6 +44,9 @@ TOOLS — use them without being asked when appropriate:
 - set_week_topic: When she picks a topic for the week → pin it so she doesn't forget
 - suggest_ideas: When she needs inspiration → return 3 punchy content ideas
 - web_search: For ANY current/recent info — cricket scores, news, trending topics, latest events, facts you're unsure of. Don't guess — search! Then weave the fresh info into your answer.
+- save_draft: When Akka asks you to WRITE/draft/compose an article → write the FULL article and save it as a draft to her website admin. Write real, complete, publish-ready content — not an outline.
+
+You can also TRANSLATE Telugu ↔ English beautifully (Akka is a translator) — do it inline when asked, keeping it natural and literary, not word-for-word.
 
 Proactive behavior:
 - If today is Monday, suggest weekly content themes
@@ -98,6 +101,20 @@ const TOOLS = [{
           query: { type: "STRING", description: "The search query, e.g. 'Virat Kohli latest news', 'India cricket schedule 2026'" },
         },
         required: ["query"],
+      },
+    },
+    {
+      name: "save_draft",
+      description: "Write and save a COMPLETE blog article as a DRAFT to Sudha's website admin. Use when she asks you to write, draft, or compose an article/blog post. You write the full article yourself in the 'content' field.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING", description: "Catchy article headline" },
+          category: { type: "STRING", description: "e.g. Cricket, Culture, Lifestyle, Women, Voice" },
+          excerpt: { type: "STRING", description: "1-2 sentence summary / hook" },
+          content: { type: "STRING", description: "The FULL article body — multiple well-written paragraphs separated by blank lines. Write it completely, ready to publish." },
+        },
+        required: ["title", "content"],
       },
     },
   ],
@@ -212,8 +229,14 @@ ${todosText}${overdueText}${contentText}`;
     // Side-effects collected across tool calls, returned to the client
     let todo: { text: string; dueDate?: string } | undefined;
     let weekTopic: string | undefined;
+    let savedDraft: { id: string; title: string } | undefined;
 
-    function runTool(name: string, args: Record<string, string>): Promise<unknown> | unknown {
+    const GRADIENTS = [
+      "from-[#1f6a6d] to-[#4ea59e]", "from-[#9e3d2d] to-[#d38d59]",
+      "from-[#3a5a7a] to-[#7aa0c4]", "from-[#6a4a7a] to-[#a98fc4]",
+    ];
+
+    async function runTool(name: string, args: Record<string, string>): Promise<unknown> {
       if (name === "add_todo") {
         todo = { text: args.text, dueDate: args.due_date };
         return { added: true, text: args.text, due_date: args.due_date ?? null, note: "Confirm warmly AND continue helping — give her useful detail, don't just say 'done'." };
@@ -228,6 +251,30 @@ ${todosText}${overdueText}${contentText}`;
       }
       if (name === "web_search") {
         return serperSearch(args.query);
+      }
+      if (name === "save_draft") {
+        try {
+          const paragraphs = (args.content ?? "").split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean);
+          if (paragraphs.length === 0) return { error: "No content to save." };
+          const words = (args.content ?? "").split(/\s+/).filter(Boolean).length;
+          const excerpt = (args.excerpt ?? paragraphs[0]).slice(0, 200);
+          const { id } = await createPost({
+            title: args.title ?? "Untitled draft",
+            excerpt,
+            content: paragraphs,
+            category: args.category ?? "Lifestyle",
+            publishedAt: new Date().toISOString(),
+            readTimeMinutes: Math.max(1, Math.round(words / 200)),
+            coverGradient: GRADIENTS[words % GRADIENTS.length],
+            status: "draft",
+            featured: false,
+            seoDescription: excerpt,
+          });
+          savedDraft = { id, title: args.title ?? "Untitled draft" };
+          return { saved: true, id, title: args.title, note: "Draft saved to admin! Tell Akka warmly it's saved as a DRAFT to review & publish in /admin/posts. Give a 1-line summary of what you wrote. Don't paste the whole article back." };
+        } catch (e) {
+          return { error: e instanceof Error ? e.message : "Could not save draft" };
+        }
       }
       return { error: `Unknown tool ${name}` };
     }
@@ -260,7 +307,7 @@ ${todosText}${overdueText}${contentText}`;
     }
 
     if (!finalText) finalText = "Akka, oka sari try cheyyi again — Tillu ready! 🤖";
-    return NextResponse.json({ text: finalText, todo, weekTopic });
+    return NextResponse.json({ text: finalText, todo, weekTopic, savedDraft });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Failed" }, { status: 500 });
   }
