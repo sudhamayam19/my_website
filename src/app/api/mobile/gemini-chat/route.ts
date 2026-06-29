@@ -3,9 +3,10 @@ import { isAdminRequest } from "@/lib/api-auth";
 import { getBlogPosts, getPodcastEpisodes } from "@/lib/content-store";
 
 interface GeminiTextPart { text: string }
+interface GeminiInlineDataPart { inlineData: { mimeType: string; data: string } }
 interface GeminiFunctionCallPart { functionCall: { name: string; args: Record<string, string> } }
 interface GeminiFunctionResponsePart { functionResponse: { name: string; response: unknown } }
-type GeminiPart = GeminiTextPart | GeminiFunctionCallPart | GeminiFunctionResponsePart;
+type GeminiPart = GeminiTextPart | GeminiInlineDataPart | GeminiFunctionCallPart | GeminiFunctionResponsePart;
 interface GeminiMessage { role: "user" | "model"; parts: GeminiPart[] }
 interface Todo { id: string; text: string; dueDate?: string; completed: boolean }
 
@@ -130,9 +131,10 @@ type GeminiResponse = {
   error?: { message: string };
 };
 
-function isOverloaded(data: GeminiResponse): boolean {
-  const msg = data.error?.message ?? "";
-  return msg.toLowerCase().includes("high demand") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("try again later");
+function shouldFallback(data: GeminiResponse): boolean {
+  const msg = (data.error?.message ?? "").toLowerCase();
+  return msg.includes("high demand") || msg.includes("overloaded") || msg.includes("try again later")
+    || msg.includes("quota") || msg.includes("exceeded") || msg.includes("rate limit") || msg.includes("resource has been exhausted");
 }
 
 async function callGemini(apiKey: string, systemText: string, contents: GeminiMessage[], includeTools = true): Promise<GeminiResponse> {
@@ -147,7 +149,7 @@ async function callGemini(apiKey: string, systemText: string, contents: GeminiMe
   const res = await fetch(API_URL(apiKey, PRIMARY_MODEL), { method: "POST", headers: { "Content-Type": "application/json" }, body });
   const data = await res.json() as GeminiResponse;
 
-  if (isOverloaded(data)) {
+  if (shouldFallback(data)) {
     const res2 = await fetch(API_URL(apiKey, FALLBACK_MODEL), { method: "POST", headers: { "Content-Type": "application/json" }, body });
     return res2.json() as Promise<GeminiResponse>;
   }

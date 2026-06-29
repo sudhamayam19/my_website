@@ -18,8 +18,9 @@ function TilluImg({ pose, size }: { pose: TilluPose; size: number }) {
   );
 }
 
-interface Msg { role: "user" | "assistant"; text: string }
-interface GeminiMsg { role: "user" | "model"; parts: [{ text: string }] }
+interface Msg { role: "user" | "assistant"; text: string; image?: string }
+type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+interface GeminiMsg { role: "user" | "model"; parts: GeminiPart[] }
 
 const WELCOME = `Good day Akka! 🤖 Tillu ikkade unna — ready to help!\n\nBlog ideas, podcast topics, reminders — anni chesta. Cheppandi em kaavalo Akka! ✨`;
 
@@ -63,6 +64,8 @@ export function TilluWebChat() {
   const [voiceMode, setVoiceMode] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [attached, setAttached] = useState<{ dataUrl: string; mimeType: string; data: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceModeRef = useRef(false);
@@ -105,12 +108,14 @@ export function TilluWebChat() {
 
   const send = async (override?: string, speakReply = false) => {
     const text = (override ?? input).trim();
-    if (!text || sending) return;
+    const img = attached;
+    if ((!text && !img) || sending) return;
     setInput("");
+    setAttached(null);
     setSending(true);
-    rememberIdea(text);
+    if (text) rememberIdea(text);
 
-    const next: Msg[] = [...msgs, { role: "user", text }];
+    const next: Msg[] = [...msgs, { role: "user", text: text || (img ? "📷 (image)" : ""), image: img?.dataUrl }];
     setMsgs(next);
 
     // Build history; prepend a compact memory turn so Tillu recalls past ideas
@@ -122,13 +127,15 @@ export function TilluWebChat() {
       });
       history.push({ role: "model", parts: [{ text: "గుర్తుపెట్టుకున్నాను Akka! 🧠 I remember all of these." }] });
     }
-    next
-      .filter((m) => m.text !== WELCOME)
-      .slice(-14)
-      .forEach((m) => history.push({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: m.text }],
-      }));
+    const recent = next.filter((m) => m.text !== WELCOME).slice(-14);
+    recent.forEach((m, idx) => {
+      const parts: GeminiPart[] = [];
+      // attach the image only to the latest user message
+      if (idx === recent.length - 1 && img) parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+      if (m.text) parts.push({ text: m.text });
+      if (parts.length === 0) parts.push({ text: "(image)" });
+      history.push({ role: m.role === "assistant" ? "model" : "user", parts });
+    });
 
     try {
       const res = await fetch("/api/mobile/gemini-chat", {
@@ -138,19 +145,42 @@ export function TilluWebChat() {
         body: JSON.stringify({ messages: history, todos: [] }),
       });
       const data = await res.json() as { text?: string; error?: string };
-      const reply = data.text ?? (data.error ? `Error: ${data.error}` : "Something went wrong 😅");
+      const reply = data.text ?? friendlyError(data.error);
       setMsgs((prev) => [...prev, { role: "assistant", text: reply }]);
       if (speakReply) speak(reply);
-    } catch (e) {
-      setMsgs((prev) => [...prev, {
-        role: "assistant",
-        text: e instanceof Error ? `Arey! Error: ${e.message}` : "Network error 😅",
-      }]);
+    } catch {
+      setMsgs((prev) => [...prev, { role: "assistant", text: "Arey Akka, network slow unna 😅 Oka sari try cheyyi!" }]);
     } finally {
       setSending(false);
     }
   };
   sendRef.current = send;
+
+  // Turn raw Google errors into short friendly Tillu lines
+  function friendlyError(err?: string): string {
+    const e = (err ?? "").toLowerCase();
+    if (e.includes("quota") || e.includes("exceeded") || e.includes("rate")) {
+      return "Arey Akka, konchem busy ga unna — free limit aipoindi 😅 Oka nimisham aagi try cheyyi!";
+    }
+    if (e.includes("api key") || e.includes("unauthorized")) {
+      return "Akka, login expire aindi anukunta — refresh chesi malli try cheyyi 🙏";
+    }
+    return "Arey Akka, chinna problem vachindi 😅 Oka sari try cheyyi!";
+  }
+
+  const pickImage = () => fileRef.current?.click();
+  const onImageChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const data = dataUrl.split(",")[1] ?? "";
+      setAttached({ dataUrl, mimeType: file.type, data });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
 
   // Speak text aloud; when in voice mode, resume listening after Tillu finishes
   const speak = (raw: string) => {
@@ -304,15 +334,21 @@ export function TilluWebChat() {
               </div>
             )}
             <div className="max-w-[78%]">
-              <div
-                className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                  m.role === "user"
-                    ? "rounded-br-sm bg-[#1f6973] text-white"
-                    : "rounded-bl-sm border border-[#e8dece] bg-white text-[#1f2d39]"
-                }`}
-              >
-                {m.text}
-              </div>
+              {m.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.image} alt="attached" className="mb-1 max-h-52 rounded-2xl border border-[#e8dece] object-cover" />
+              )}
+              {m.text && (
+                <div
+                  className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                    m.role === "user"
+                      ? "rounded-br-sm bg-[#1f6973] text-white"
+                      : "rounded-bl-sm border border-[#e8dece] bg-white text-[#1f2d39]"
+                  }`}
+                >
+                  {m.text}
+                </div>
+              )}
               {m.role === "assistant" && m.text !== WELCOME && (
                 <button
                   onClick={() => void copyMsg(m.text, i)}
@@ -367,8 +403,28 @@ export function TilluWebChat() {
         </div>
       )}
 
+      {/* Attached image preview */}
+      {attached && (
+        <div className="flex items-center gap-2 px-4 pb-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={attached.dataUrl} alt="to send" className="h-14 w-14 rounded-lg border border-[#d3c1a8] object-cover" />
+          <button onClick={() => setAttached(null)} className="text-xs font-semibold text-[#c85a2a] hover:underline">Remove</button>
+        </div>
+      )}
+
       {/* Input */}
-      <div className="border-t border-[#e8dece] bg-[#fffaf3] px-4 py-3 pr-20 flex gap-2 items-end">
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onImageChosen} />
+      <div className="border-t border-[#e8dece] bg-[#fffaf3] px-4 py-3 flex gap-2 items-end">
+        {/* Attach image */}
+        <button
+          onClick={pickImage}
+          title="Attach image"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#d3c1a8] text-[#1f6973] hover:border-[#1f6973] transition"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+          </svg>
+        </button>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -396,7 +452,7 @@ export function TilluWebChat() {
         </button>
         <button
           onClick={() => void send()}
-          disabled={!input.trim() || sending}
+          disabled={(!input.trim() && !attached) || sending}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1f6973] text-white transition hover:bg-[#185860] disabled:opacity-40"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 rotate-45">
