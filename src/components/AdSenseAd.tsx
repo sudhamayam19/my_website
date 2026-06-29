@@ -21,7 +21,7 @@ export function AdSenseAd({
   fullWidthResponsive = true,
   className,
 }: AdSenseAdProps) {
-  const publisherId = process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID;
+  const publisherId = process.env.NEXT_PUBLIC_ADSENSE_PUBLISHER_ID ?? "ca-pub-8202255140377397";
 
   useEffect(() => {
     if (!publisherId) return;

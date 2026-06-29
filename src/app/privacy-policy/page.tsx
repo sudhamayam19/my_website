@@ -44,10 +44,19 @@ export default async function PrivacyPolicyPage() {
             </article>
 
             <article>
-              <h2 className="display-font text-3xl font-bold text-[#1f2d39]">Cookies</h2>
+              <h2 className="display-font text-3xl font-bold text-[#1f2d39]">Cookies & advertising</h2>
               <p className="mt-3 text-sm leading-relaxed text-[#4f5f69]">
-                Cookies or similar technologies may be used for site functionality, analytics, and
-                advertising support if ads are enabled in the future.
+                Cookies and similar technologies are used for site functionality, analytics, and
+                advertising. This site uses <strong>Google AdSense</strong> to serve ads. Google and its
+                partners use cookies (including the DoubleClick DART cookie) to serve ads based on a
+                user&apos;s prior visits to this and other websites. You can opt out of personalised
+                advertising by visiting{" "}
+                <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" className="text-[#2a6670] underline">
+                  Google Ads Settings
+                </a>. Third-party vendors may also be controlled at{" "}
+                <a href="https://www.aboutads.info" target="_blank" rel="noopener noreferrer" className="text-[#2a6670] underline">
+                  aboutads.info
+                </a>.
               </p>
             </article>
 
