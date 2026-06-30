@@ -131,6 +131,15 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         setup: {
           model: MODEL,
           generationConfig: { responseModalities: ["AUDIO"] },
+          // Less trigger-happy interruption: only cut off on a clear, sustained voice
+          realtimeInputConfig: {
+            automaticActivityDetection: {
+              startOfSpeechSensitivity: "START_SENSITIVITY_LOW",
+              endOfSpeechSensitivity: "END_SENSITIVITY_LOW",
+              prefixPaddingMs: 300,
+              silenceDurationMs: 700,
+            },
+          },
           outputAudioTranscription: {},
           inputAudioTranscription: {},
           ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
@@ -164,7 +173,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     void ctx.resume();
     const srcRate = ctx.sampleRate; // typically 48000
     const src = ctx.createMediaStreamSource(streamRef.current!);
-    const proc = ctx.createScriptProcessor(4096, 1, 1);
+    const proc = ctx.createScriptProcessor(2048, 1, 1); // smaller buffer = lower latency
     procRef.current = proc;
 
     proc.onaudioprocess = (e) => {
