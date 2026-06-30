@@ -38,6 +38,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const procRef = useRef<ScriptProcessorNode | null>(null);
   const playHeadRef = useRef(0);
   const liveRef = useRef(true);
+  const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
 
   useEffect(() => {
     liveRef.current = true;
@@ -209,10 +210,13 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // Instantly cut off Tillu's voice (used when Akka interrupts by speaking)
   const stopPlayback = () => {
-    try { playCtxRef.current?.close(); } catch { /* */ }
-    playCtxRef.current = null;
-    playHeadRef.current = 0;
+    for (const node of activeSourcesRef.current) {
+      try { node.onended = null; node.stop(); } catch { /* already stopped */ }
+    }
+    activeSourcesRef.current = [];
+    if (playCtxRef.current) playHeadRef.current = playCtxRef.current.currentTime;
     setTilluSpeaking(false);
   };
 
@@ -235,6 +239,12 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     const node = ctx.createBufferSource();
     node.buffer = buf;
     node.connect(ctx.destination);
+
+    // Track so we can stop instantly on interruption
+    activeSourcesRef.current.push(node);
+    node.onended = () => {
+      activeSourcesRef.current = activeSourcesRef.current.filter((n) => n !== node);
+    };
 
     const startAt = Math.max(ctx.currentTime, playHeadRef.current);
     node.start(startAt);
