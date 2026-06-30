@@ -30,6 +30,12 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState("");
   const [tilluSpeaking, setTilluSpeaking] = useState(false);
   const [dbg, setDbg] = useState({ rx: 0, audio: 0, txKb: 0 });
+  const [turns, setTurns] = useState<{ role: "you" | "tillu"; text: string }[]>([]);
+  const [secs, setSecs] = useState(0);
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const turnsRef = useRef<{ role: "you" | "tillu"; text: string }[]>([]);
+  const lastRoleRef = useRef<"you" | "tillu" | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const micCtxRef = useRef<AudioContext | null>(null);
@@ -46,6 +52,34 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     return () => { liveRef.current = false; cleanup(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Session timer while the call is live
+  useEffect(() => {
+    if (state !== "live") return;
+    const t = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [state]);
+
+  // Auto-scroll transcript to newest line
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [turns]);
+
+  // Append a streaming transcript chunk under the right speaker
+  const addTranscript = (role: "you" | "tillu", chunk: string) => {
+    if (!chunk) return;
+    const arr = turnsRef.current;
+    if (lastRoleRef.current === role && arr.length > 0 && arr[arr.length - 1].role === role) {
+      arr[arr.length - 1] = { role, text: arr[arr.length - 1].text + chunk };
+    } else {
+      arr.push({ role, text: chunk });
+      lastRoleRef.current = role;
+    }
+    turnsRef.current = [...arr];
+    setTurns(turnsRef.current);
+  };
+
+  const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   const cleanup = () => {
     try { procRef.current?.disconnect(); } catch { /* */ }
@@ -97,6 +131,8 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         setup: {
           model: MODEL,
           generationConfig: { responseModalities: ["AUDIO"] },
+          outputAudioTranscription: {},
+          inputAudioTranscription: {},
           ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
         },
       }));
@@ -176,6 +212,8 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       error?: { message?: string };
       serverContent?: {
         modelTurn?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] };
+        outputTranscription?: { text?: string };
+        inputTranscription?: { text?: string };
         turnComplete?: boolean;
         interrupted?: boolean;
       };
@@ -193,6 +231,10 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     const sc = msg.serverContent;
     if (!sc) return;
 
+    // Live transcripts → on-screen text
+    if (sc.inputTranscription?.text) addTranscript("you", sc.inputTranscription.text);
+    if (sc.outputTranscription?.text) addTranscript("tillu", sc.outputTranscription.text);
+
     if (sc.interrupted) { stopPlayback(); return; }
 
     const parts = sc.modelTurn?.parts ?? [];
@@ -206,8 +248,17 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       }
     }
     if (sc.turnComplete) {
+      lastRoleRef.current = null; // next transcript chunk starts a fresh line
       setTimeout(() => setTilluSpeaking(false), 150);
     }
+  };
+
+  const copyTurn = async (text: string, i: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIdx(i);
+      setTimeout(() => setCopiedIdx((c) => (c === i ? null : c)), 1500);
+    } catch { /* clipboard blocked */ }
   };
 
   // Instantly cut off Tillu's voice (used when Akka interrupts by speaking)
@@ -253,46 +304,66 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0c2830]/95 backdrop-blur">
-      <div className={`relative mb-8 transition-transform ${tilluSpeaking ? "scale-110" : "scale-100"}`}>
+    <div className="fixed inset-0 z-50 flex flex-col items-center bg-[#0c2830]/95 px-4 py-6 backdrop-blur">
+      <div className={`relative mt-2 transition-transform ${tilluSpeaking ? "scale-110" : "scale-100"}`}>
         {tilluSpeaking && (
-          <span className="absolute inset-0 -m-4 animate-ping rounded-full bg-[#1f6973]/40" />
+          <span className="absolute inset-0 -m-3 animate-ping rounded-full bg-[#1f6973]/40" />
         )}
-        <Image src="/tillu/tillu-mic.png" alt="Tillu" width={180} height={180} priority className="relative" />
+        <Image src="/tillu/tillu-mic.png" alt="Tillu" width={120} height={120} priority className="relative" />
       </div>
 
-      <p className="text-xl font-bold text-white">Tillu</p>
-      <p className="mt-1 text-sm font-semibold text-[#9ec7cc]">
+      <p className="mt-2 text-lg font-bold text-white">Tillu</p>
+      <p className="mt-0.5 text-xs font-semibold text-[#9ec7cc]">
         {state === "connecting" && "Connecting… 📞"}
         {state === "live" && (tilluSpeaking ? "🔊 Tillu maatladtundi…" : "🎙️ Vintunna Akka — maatladandi!")}
         {state === "ended" && "Call ended"}
         {state === "error" && `⚠️ ${error}`}
+        {state === "live" && `  ·  ${mmss(secs)}`}
       </p>
+
+      {/* Live transcript */}
       {state === "live" && (
-        <p className="mt-1 font-mono text-[10px] text-[#5f8288]">
-          mic↑{dbg.txKb}kb · server↓{dbg.rx} · audio{dbg.audio}
-        </p>
+        <div className="mt-4 w-full max-w-md flex-1 overflow-y-auto rounded-2xl border border-[#1f4a52] bg-[#0a2026]/60 p-3 space-y-2">
+          {turns.length === 0 ? (
+            <p className="py-6 text-center text-xs text-[#5f8288]">Maatladandi Akka — your conversation appears here 📝</p>
+          ) : (
+            turns.map((t, i) => (
+              <div key={i} className={`flex ${t.role === "you" ? "justify-end" : "justify-start"}`}>
+                <div className={`group max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                  t.role === "you" ? "bg-[#1f6973] text-white" : "bg-[#13343c] text-[#dfeeef]"
+                }`}>
+                  <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-wider opacity-50">
+                    {t.role === "you" ? "Akka" : "Tillu"}
+                  </span>
+                  {t.text}
+                  {t.role === "tillu" && t.text.length > 8 && (
+                    <button onClick={() => void copyTurn(t.text, i)} className="ml-2 text-[10px] font-semibold text-[#7fb3b8] hover:text-white">
+                      {copiedIdx === i ? "✓" : "copy"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={transcriptEndRef} />
+        </div>
       )}
 
-      <div className="mt-10 flex items-center gap-5">
+      <div className="mt-5 flex items-center gap-5">
         {state === "error" ? (
           <button onClick={onClose} className="rounded-full bg-white px-6 py-3 text-sm font-bold text-[#1f2d39]">Close</button>
         ) : (
           <button
             onClick={endCall}
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-[#d33] text-white shadow-lg transition hover:bg-[#b22]"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-[#d33] text-white shadow-lg transition hover:bg-[#b22]"
             title="End call"
           >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7 rotate-[135deg]">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6 rotate-[135deg]">
               <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
             </svg>
           </button>
         )}
       </div>
-
-      <p className="mt-6 max-w-xs text-center text-[11px] text-[#6f9298]">
-        Real Gemini Live · native voice. Speak naturally — Tillu hears you and talks back.
-      </p>
     </div>
   );
 }
