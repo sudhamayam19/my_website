@@ -116,11 +116,14 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     };
   };
 
-  // Stream mic audio → Gemini as 16kHz PCM16 base64
+  // Stream mic audio → Gemini as TRUE 16kHz PCM16 base64 (downsampled from native rate)
   const startMic = () => {
     const AudioCtx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
-    const ctx = new AudioCtx({ sampleRate: IN_RATE });
+    // Don't force sampleRate — browsers often ignore it. Use native rate and downsample ourselves.
+    const ctx = new AudioCtx();
     micCtxRef.current = ctx;
+    void ctx.resume();
+    const srcRate = ctx.sampleRate; // typically 48000
     const src = ctx.createMediaStreamSource(streamRef.current!);
     const proc = ctx.createScriptProcessor(4096, 1, 1);
     procRef.current = proc;
@@ -129,9 +132,10 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       const ws = wsRef.current;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
       const input = e.inputBuffer.getChannelData(0);
-      const pcm = new Int16Array(input.length);
-      for (let i = 0; i < input.length; i++) {
-        const s = Math.max(-1, Math.min(1, input[i]));
+      const down = downsample(input, srcRate, IN_RATE);
+      const pcm = new Int16Array(down.length);
+      for (let i = 0; i < down.length; i++) {
+        const s = Math.max(-1, Math.min(1, down[i]));
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
       }
       const b64 = b64FromBytes(new Uint8Array(pcm.buffer));
@@ -144,9 +148,27 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     proc.connect(ctx.destination);
   };
 
+  // Linear-interpolation downsample from srcRate → dstRate
+  const downsample = (buf: Float32Array, srcRate: number, dstRate: number): Float32Array => {
+    if (dstRate >= srcRate) return buf;
+    const ratio = srcRate / dstRate;
+    const newLen = Math.round(buf.length / ratio);
+    const out = new Float32Array(newLen);
+    for (let i = 0; i < newLen; i++) {
+      const idx = i * ratio;
+      const lo = Math.floor(idx);
+      const hi = Math.min(lo + 1, buf.length - 1);
+      const frac = idx - lo;
+      out[i] = buf[lo] * (1 - frac) + buf[hi] * frac;
+    }
+    return out;
+  };
+
   // Handle Gemini's streamed audio replies
   const handleServerMessage = (raw: string) => {
     let msg: {
+      setupComplete?: unknown;
+      error?: { message?: string };
       serverContent?: {
         modelTurn?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] };
         turnComplete?: boolean;
@@ -154,6 +176,12 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       };
     };
     try { msg = JSON.parse(raw); } catch { return; }
+
+    if (msg.error?.message) {
+      if (liveRef.current) { setError(msg.error.message); setState("error"); }
+      return;
+    }
+    if (msg.setupComplete) return; // handshake ok
 
     const sc = msg.serverContent;
     if (!sc) return;
@@ -163,7 +191,9 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     const parts = sc.modelTurn?.parts ?? [];
     for (const p of parts) {
       const data = p.inlineData?.data;
-      if (data && p.inlineData?.mimeType?.includes("audio")) {
+      const mime = p.inlineData?.mimeType ?? "";
+      // Accept PCM audio (mime usually "audio/pcm;rate=24000"); play any inline audio data
+      if (data && (mime.includes("audio") || mime.includes("pcm") || mime === "")) {
         playPcm(data);
       }
     }
@@ -183,10 +213,11 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const playPcm = (b64: string) => {
     const AudioCtx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
     if (!playCtxRef.current || playCtxRef.current.state === "closed") {
-      playCtxRef.current = new AudioCtx({ sampleRate: OUT_RATE });
+      playCtxRef.current = new AudioCtx();
       playHeadRef.current = playCtxRef.current.currentTime;
     }
     const ctx = playCtxRef.current;
+    if (ctx.state === "suspended") void ctx.resume();
     const bytes = bytesFromB64(b64);
     const pcm = new Int16Array(bytes.buffer);
     const f32 = new Float32Array(pcm.length);
