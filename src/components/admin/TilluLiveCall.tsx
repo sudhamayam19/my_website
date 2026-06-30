@@ -12,6 +12,23 @@ const MODEL = "models/gemini-2.5-flash-native-audio-latest";
 const IN_RATE = 16000;   // mic → Gemini
 const OUT_RATE = 24000;  // Gemini → speaker
 
+// Tools Tillu can call during a live call (executed server-side via /api/mobile/tillu-tool)
+const LIVE_TOOLS = [{
+  functionDeclarations: [
+    { name: "web_search", description: "Search the live web for current news, cricket scores, facts, trending topics.",
+      parameters: { type: "OBJECT", properties: { query: { type: "STRING", description: "search query" } }, required: ["query"] } },
+    { name: "save_draft", description: "Write and save a COMPLETE blog article as a draft to Sudha's website. Use when she asks you to write/draft an article.",
+      parameters: { type: "OBJECT", properties: {
+        title: { type: "STRING" }, category: { type: "STRING" }, excerpt: { type: "STRING" },
+        content: { type: "STRING", description: "the full article body, paragraphs separated by blank lines" },
+      }, required: ["title", "content"] } },
+    { name: "add_todo", description: "Add a task/reminder to Sudha's list.",
+      parameters: { type: "OBJECT", properties: { text: { type: "STRING" } }, required: ["text"] } },
+    { name: "set_week_topic", description: "Pin this week's content topic.",
+      parameters: { type: "OBJECT", properties: { topic: { type: "STRING" } }, required: ["topic"] } },
+  ],
+}];
+
 // base64 helpers
 function b64FromBytes(bytes: Uint8Array): string {
   let bin = "";
@@ -131,6 +148,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         setup: {
           model: MODEL,
           generationConfig: { responseModalities: ["AUDIO"] },
+          tools: LIVE_TOOLS,
           // Less trigger-happy interruption: only cut off on a clear, sustained voice
           realtimeInputConfig: {
             automaticActivityDetection: {
@@ -214,11 +232,36 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     return out;
   };
 
+  // Execute a tool server-side and send the result back over the WS
+  const handleToolCall = async (calls: { id: string; name: string; args: Record<string, string> }[]) => {
+    const responses = [];
+    for (const c of calls) {
+      let result: unknown = { error: "failed" };
+      try {
+        const res = await fetch("/api/mobile/tillu-tool", {
+          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+          body: JSON.stringify({ name: c.name, args: c.args }),
+        });
+        const data = await res.json() as { result?: unknown };
+        result = data.result ?? { ok: true };
+        if (c.name === "save_draft" && (result as { saved?: boolean })?.saved) {
+          addTranscript("tillu", `📝 [saved draft: "${c.args.title}"]`);
+        }
+      } catch { result = { error: "tool error" }; }
+      responses.push({ id: c.id, name: c.name, response: result });
+    }
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ toolResponse: { functionResponses: responses } }));
+    }
+  };
+
   // Handle Gemini's streamed audio replies
   const handleServerMessage = (raw: string) => {
     let msg: {
       setupComplete?: unknown;
       error?: { message?: string };
+      toolCall?: { functionCalls?: { id: string; name: string; args: Record<string, string> }[] };
       serverContent?: {
         modelTurn?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] };
         outputTranscription?: { text?: string };
@@ -236,6 +279,11 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       return;
     }
     if (msg.setupComplete) return; // handshake ok
+
+    if (msg.toolCall?.functionCalls?.length) {
+      void handleToolCall(msg.toolCall.functionCalls);
+      return;
+    }
 
     const sc = msg.serverContent;
     if (!sc) return;
