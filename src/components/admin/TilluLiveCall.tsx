@@ -28,6 +28,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const [state, setState] = useState<CallState>("connecting");
   const [error, setError] = useState("");
   const [tilluSpeaking, setTilluSpeaking] = useState(false);
+  const [dbg, setDbg] = useState({ rx: 0, audio: 0, txKb: 0 });
 
   const wsRef = useRef<WebSocket | null>(null);
   const micCtxRef = useRef<AudioContext | null>(null);
@@ -139,9 +140,11 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
       }
       const b64 = b64FromBytes(new Uint8Array(pcm.buffer));
+      // Current native-audio Live API expects realtimeInput.audio (singular Blob)
       ws.send(JSON.stringify({
-        realtimeInput: { mediaChunks: [{ mimeType: `audio/pcm;rate=${IN_RATE}`, data: b64 }] },
+        realtimeInput: { audio: { mimeType: `audio/pcm;rate=${IN_RATE}`, data: b64 } },
       }));
+      setDbg((d) => ({ ...d, txKb: d.txKb + Math.round(b64.length / 1024) }));
     };
 
     src.connect(proc);
@@ -177,6 +180,8 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     };
     try { msg = JSON.parse(raw); } catch { return; }
 
+    setDbg((d) => ({ ...d, rx: d.rx + 1 }));
+
     if (msg.error?.message) {
       if (liveRef.current) { setError(msg.error.message); setState("error"); }
       return;
@@ -194,6 +199,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       const mime = p.inlineData?.mimeType ?? "";
       // Accept PCM audio (mime usually "audio/pcm;rate=24000"); play any inline audio data
       if (data && (mime.includes("audio") || mime.includes("pcm") || mime === "")) {
+        setDbg((d) => ({ ...d, audio: d.audio + 1 }));
         playPcm(data);
       }
     }
@@ -251,6 +257,11 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         {state === "ended" && "Call ended"}
         {state === "error" && `⚠️ ${error}`}
       </p>
+      {state === "live" && (
+        <p className="mt-1 font-mono text-[10px] text-[#5f8288]">
+          mic↑{dbg.txKb}kb · server↓{dbg.rx} · audio{dbg.audio}
+        </p>
+      )}
 
       <div className="mt-10 flex items-center gap-5">
         {state === "error" ? (
