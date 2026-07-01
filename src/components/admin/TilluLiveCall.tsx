@@ -66,6 +66,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const setupOkRef = useRef(false);
   const triedFallbackRef = useRef(false);
   const [visual, setVisual] = useState<"none" | "camera" | "screen">("none");
+  const [typed, setTyped] = useState("");
   const visualStreamRef = useRef<MediaStream | null>(null);
   const videoElRef = useRef<HTMLVideoElement | null>(null);
   const frameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -157,6 +158,17 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const flipCamera = async () => {
     const next = facingRef.current === "environment" ? "user" : "environment";
     await startVisual("camera", next); // startVisual stops the old stream first
+  };
+
+  // Text fallback — type to Tillu if mic doesn't work; Tillu still replies with voice
+  const sendTyped = () => {
+    const text = typed.trim();
+    const ws = wsRef.current;
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text }] }], turnComplete: true } }));
+    addTranscript("you", text);
+    lastRoleRef.current = null;
+    setTyped("");
   };
 
   const cleanup = () => {
@@ -559,6 +571,29 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         <p className="mt-2 text-[11px] text-[#7fb3b8]">
           {visual === "camera" ? "📷 Tillu can see your camera" : "🖥️ Tillu can see your screen"} — tap again to stop
         </p>
+      )}
+
+      {/* Text fallback — type if mic isn't working; Tillu still replies by voice */}
+      {state === "live" && (
+        <div className="mt-4 flex w-full max-w-md items-center gap-2">
+          <input
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") sendTyped(); }}
+            placeholder="Type to Tillu (if mic doesn't work)…"
+            className="flex-1 rounded-full border border-[#1f4a52] bg-[#0a2026] px-4 py-2.5 text-sm text-white placeholder-[#5f8288] outline-none focus:border-[#1f6973]"
+          />
+          <button
+            onClick={sendTyped}
+            disabled={!typed.trim()}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1f6973] text-white transition hover:bg-[#185860] disabled:opacity-40"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 rotate-45">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
       )}
     </div>
   );
