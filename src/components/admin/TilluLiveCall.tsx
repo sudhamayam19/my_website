@@ -233,13 +233,21 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    // 2. Try mic — but if it's blocked, still connect so text + camera work
+    // 2. Try mic — lenient constraints (strict channelCount breaks many PC mics).
+    // If it's still blocked, connect anyway so text + camera work.
     if (!streamRef.current) {
       try {
-        streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+        streamRef.current = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
       } catch {
-        streamRef.current = null; // no mic → text-only mode, don't abort the call
-        setMicOff(true);
+        try {
+          // Fallback: barest possible request
+          streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch {
+          streamRef.current = null; // no mic → text-only mode, don't abort the call
+          setMicOff(true);
+        }
       }
     }
 
