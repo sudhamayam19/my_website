@@ -65,6 +65,10 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const setupOkRef = useRef(false);
   const triedFallbackRef = useRef(false);
+  const [visual, setVisual] = useState<"none" | "camera" | "screen">("none");
+  const visualStreamRef = useRef<MediaStream | null>(null);
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
+  const frameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     liveRef.current = true;
@@ -101,12 +105,59 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
 
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
+  // ── Camera / screen share: send a downscaled JPEG frame to Gemini every ~1.5s ──
+  const stopVisual = () => {
+    if (frameTimerRef.current) { clearInterval(frameTimerRef.current); frameTimerRef.current = null; }
+    try { visualStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* */ }
+    visualStreamRef.current = null;
+    setVisual("none");
+  };
+
+  const sendFrame = () => {
+    const v = videoElRef.current;
+    const ws = wsRef.current;
+    if (!v || v.videoWidth === 0 || !ws || ws.readyState !== WebSocket.OPEN) return;
+    const maxW = 768;
+    const scale = Math.min(1, maxW / v.videoWidth);
+    const w = Math.round(v.videoWidth * scale), h = Math.round(v.videoHeight * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(v, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+    const b64 = dataUrl.split(",")[1];
+    if (b64) ws.send(JSON.stringify({ realtimeInput: { video: { mimeType: "image/jpeg", data: b64 } } }));
+  };
+
+  const startVisual = async (kind: "camera" | "screen") => {
+    if (visual !== "none") { stopVisual(); if (visual === kind) return; }
+    try {
+      const stream = kind === "camera"
+        ? await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        : await navigator.mediaDevices.getDisplayMedia({ video: true });
+      visualStreamRef.current = stream;
+      // user stops screen share from the browser UI
+      stream.getVideoTracks()[0]?.addEventListener("ended", stopVisual);
+      setVisual(kind);
+      if (videoElRef.current) {
+        videoElRef.current.srcObject = stream;
+        await videoElRef.current.play().catch(() => {});
+      }
+      frameTimerRef.current = setInterval(sendFrame, 1500);
+      addTranscript("you", kind === "camera" ? "📷 [showing camera]" : "🖥️ [sharing screen]");
+    } catch {
+      // permission denied / cancelled — ignore
+    }
+  };
+
   const cleanup = () => {
     try { procRef.current?.disconnect(); } catch { /* */ }
     try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* */ }
     try { micCtxRef.current?.close(); } catch { /* */ }
     try { playCtxRef.current?.close(); } catch { /* */ }
     try { wsRef.current?.close(); } catch { /* */ }
+    stopVisual();
   };
 
   const endCall = () => {
@@ -425,21 +476,68 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         </div>
       )}
 
-      <div className="mt-5 flex items-center gap-5">
+      {/* Live camera / screen preview (also the frame-capture source) */}
+      <video
+        ref={videoElRef}
+        muted
+        playsInline
+        className={visual === "none" ? "hidden" : "mt-3 h-24 w-40 rounded-xl border border-[#1f6973] object-cover"}
+      />
+
+      <div className="mt-5 flex items-center gap-4">
         {state === "error" ? (
           <button onClick={onClose} className="rounded-full bg-white px-6 py-3 text-sm font-bold text-[#1f2d39]">Close</button>
         ) : (
-          <button
-            onClick={endCall}
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-[#d33] text-white shadow-lg transition hover:bg-[#b22]"
-            title="End call"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6 rotate-[135deg]">
-              <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
-            </svg>
-          </button>
+          <>
+            {/* Camera */}
+            <button
+              onClick={() => (visual === "camera" ? stopVisual() : void startVisual("camera"))}
+              disabled={state !== "live"}
+              title="Show camera to Tillu"
+              className={`flex h-12 w-12 items-center justify-center rounded-full transition disabled:opacity-40 ${
+                visual === "camera" ? "bg-[#1f6973] text-white" : "border border-[#5f8288] text-[#9ec7cc]"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            </button>
+
+            {/* End call */}
+            <button
+              onClick={endCall}
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-[#d33] text-white shadow-lg transition hover:bg-[#b22]"
+              title="End call"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6 rotate-[135deg]">
+                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
+              </svg>
+            </button>
+
+            {/* Share screen */}
+            <button
+              onClick={() => (visual === "screen" ? stopVisual() : void startVisual("screen"))}
+              disabled={state !== "live"}
+              title="Share screen with Tillu"
+              className={`flex h-12 w-12 items-center justify-center rounded-full transition disabled:opacity-40 ${
+                visual === "screen" ? "bg-[#1f6973] text-white" : "border border-[#5f8288] text-[#9ec7cc]"
+              }`}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
+            </button>
+          </>
         )}
       </div>
+
+      {visual !== "none" && (
+        <p className="mt-2 text-[11px] text-[#7fb3b8]">
+          {visual === "camera" ? "📷 Tillu can see your camera" : "🖥️ Tillu can see your screen"} — tap again to stop
+        </p>
+      )}
     </div>
   );
 }
