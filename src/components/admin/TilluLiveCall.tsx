@@ -69,6 +69,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const visualStreamRef = useRef<MediaStream | null>(null);
   const videoElRef = useRef<HTMLVideoElement | null>(null);
   const frameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const facingRef = useRef<"environment" | "user">("environment");
 
   useEffect(() => {
     liveRef.current = true;
@@ -130,13 +131,14 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     if (b64) ws.send(JSON.stringify({ realtimeInput: { video: { mimeType: "image/jpeg", data: b64 } } }));
   };
 
-  const startVisual = async (kind: "camera" | "screen") => {
-    if (visual !== "none") { stopVisual(); if (visual === kind) return; }
+  const startVisual = async (kind: "camera" | "screen", facing: "environment" | "user" = facingRef.current) => {
+    if (visual !== "none") { stopVisual(); if (visual === kind && kind === "screen") return; }
     try {
       const stream = kind === "camera"
-        ? await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        ? await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } })
         : await navigator.mediaDevices.getDisplayMedia({ video: true });
       visualStreamRef.current = stream;
+      if (kind === "camera") facingRef.current = facing;
       // user stops screen share from the browser UI
       stream.getVideoTracks()[0]?.addEventListener("ended", stopVisual);
       setVisual(kind);
@@ -144,11 +146,17 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
         videoElRef.current.srcObject = stream;
         await videoElRef.current.play().catch(() => {});
       }
-      frameTimerRef.current = setInterval(sendFrame, 1500);
+      if (!frameTimerRef.current) frameTimerRef.current = setInterval(sendFrame, 1500);
       addTranscript("you", kind === "camera" ? "📷 [showing camera]" : "🖥️ [sharing screen]");
     } catch {
       // permission denied / cancelled — ignore
     }
+  };
+
+  // Flip front ↔ back camera without dropping the call
+  const flipCamera = async () => {
+    const next = facingRef.current === "environment" ? "user" : "environment";
+    await startVisual("camera", next); // startVisual stops the old stream first
   };
 
   const cleanup = () => {
@@ -477,12 +485,26 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       )}
 
       {/* Live camera / screen preview (also the frame-capture source) */}
-      <video
-        ref={videoElRef}
-        muted
-        playsInline
-        className={visual === "none" ? "hidden" : "mt-3 h-24 w-40 rounded-xl border border-[#1f6973] object-cover"}
-      />
+      <div className={visual === "none" ? "hidden" : "relative mt-3"}>
+        <video
+          ref={videoElRef}
+          muted
+          playsInline
+          className="h-24 w-40 rounded-xl border border-[#1f6973] object-cover"
+        />
+        {visual === "camera" && (
+          <button
+            onClick={() => void flipCamera()}
+            title="Flip camera"
+            className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#1f6973] text-white shadow-lg"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
+              <path d="M23 4v6h-6M1 20v-6h6" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       <div className="mt-5 flex items-center gap-4">
         {state === "error" ? (
