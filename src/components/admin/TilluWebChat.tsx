@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { TilluLiveCall } from "./TilluLiveCall";
+import { saveDoc } from "@/lib/tillu-corner";
 
 type TilluPose = "idle" | "wave" | "mic" | "idea";
 function TilluImg({ pose, size }: { pose: TilluPose; size: number }) {
@@ -61,6 +62,7 @@ export function TilluWebChat() {
   const [listening, setListening] = useState(false);
   const [memory, setMemory] = useState<string[]>([]);
   const [copied, setCopied] = useState<number | null>(null);
+  const [savedToCorner, setSavedToCorner] = useState<number | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [calling, setCalling] = useState(false);
@@ -317,6 +319,12 @@ export function TilluWebChat() {
         >
           {voiceMode ? (speaking ? "🔊 maatladtundi…" : listening ? "🎙️ Vintunna…" : "🎙️ Live ON") : "🎙️ Talk Live"}
         </button>
+        <a
+          href="/admin/tillu-corner"
+          className="rounded-full border border-[#d3c1a8] px-3 py-1.5 text-xs font-bold text-[#455964] hover:border-[#1f6973] hover:text-[#1f6973] transition"
+        >
+          📁 Corner
+        </a>
         <button
           onClick={newChat}
           className="rounded-full border border-[#d3c1a8] px-3 py-1.5 text-xs font-bold text-[#455964] hover:border-[#1f6973] hover:text-[#1f6973] transition"
@@ -351,22 +359,33 @@ export function TilluWebChat() {
                 </div>
               )}
               {m.role === "assistant" && m.text !== WELCOME && (
-                <button
-                  onClick={() => void copyMsg(m.text, i)}
-                  className="mt-1 ml-1 inline-flex items-center gap-1 rounded-full border border-[#e8dece] bg-[#f7efe4] px-2.5 py-1 text-[11px] font-semibold text-[#5f6f79] hover:border-[#1f6973] hover:text-[#1f6973] transition"
-                >
-                  {copied === i ? (
-                    <>✓ Copied</>
-                  ) : (
-                    <>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                      </svg>
-                      Copy script
-                    </>
-                  )}
-                </button>
+                <div className="mt-1 ml-1 flex gap-1.5">
+                  <button
+                    onClick={() => void copyMsg(m.text, i)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#e8dece] bg-[#f7efe4] px-2.5 py-1 text-[11px] font-semibold text-[#5f6f79] hover:border-[#1f6973] hover:text-[#1f6973] transition"
+                  >
+                    {copied === i ? "✓ Copied" : (
+                      <>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                        </svg>
+                        Copy
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const title = m.text.split("\n")[0].replace(/[*#]/g, "").slice(0, 60) || "Tillu script";
+                      saveDoc({ title, content: m.text, source: "chat" });
+                      setSavedToCorner(i);
+                      setTimeout(() => setSavedToCorner((c) => (c === i ? null : c)), 1500);
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#e8dece] bg-[#f7efe4] px-2.5 py-1 text-[11px] font-semibold text-[#5f6f79] hover:border-[#1f6973] hover:text-[#1f6973] transition"
+                  >
+                    {savedToCorner === i ? "✓ Saved" : "📁 Save to Corner"}
+                  </button>
+                </div>
               )}
             </div>
           </div>

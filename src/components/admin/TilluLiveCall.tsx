@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { saveCall } from "@/lib/tillu-corner";
 
 type CallState = "connecting" | "live" | "ended" | "error";
 
@@ -197,6 +198,8 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
 
   const endCall = () => {
     liveRef.current = false;
+    // Save the transcript to Tillu Corner before tearing down
+    try { saveCall({ date: new Date().toISOString(), durationSecs: secs, turns: turnsRef.current }); } catch { /* */ }
     cleanup();
     setState("ended");
     onClose();
