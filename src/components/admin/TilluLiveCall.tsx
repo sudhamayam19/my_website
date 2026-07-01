@@ -8,7 +8,8 @@ type CallState = "connecting" | "live" | "ended" | "error";
 // Ephemeral tokens require the Constrained endpoint
 const WS_BASE =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
-const MODEL = "models/gemini-3.1-flash-live-preview";
+const PRIMARY_MODEL = "models/gemini-3.1-flash-live-preview";        // fast, preview
+const FALLBACK_MODEL = "models/gemini-2.5-flash-native-audio-latest"; // stable
 const IN_RATE = 16000;   // mic → Gemini
 const OUT_RATE = 24000;  // Gemini → speaker
 
@@ -62,6 +63,8 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const playHeadRef = useRef(0);
   const liveRef = useRef(true);
   const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
+  const setupOkRef = useRef(false);
+  const triedFallbackRef = useRef(false);
 
   useEffect(() => {
     liveRef.current = true;
@@ -113,7 +116,17 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
-  const start = async () => {
+  // If the fast preview model fails before setup completes, retry once with the stable model
+  const maybeFallback = (): boolean => {
+    if (setupOkRef.current || triedFallbackRef.current || !liveRef.current) return false;
+    triedFallbackRef.current = true;
+    try { wsRef.current?.close(); } catch { /* */ }
+    void start(FALLBACK_MODEL);
+    return true;
+  };
+
+  const start = async (model: string = PRIMARY_MODEL) => {
+    setupOkRef.current = false;
     // 1. Get an ephemeral token + system instruction from our server
     let token = "";
     let systemInstruction = "";
@@ -129,13 +142,15 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    // 2. Mic permission + capture context
-    try {
-      streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
-    } catch {
-      setError("Microphone permission needed for the call.");
-      setState("error");
-      return;
+    // 2. Mic permission + capture context (reuse existing stream on fallback retry)
+    if (!streamRef.current) {
+      try {
+        streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+      } catch {
+        setError("Microphone permission needed for the call.");
+        setState("error");
+        return;
+      }
     }
 
     // 3. Open WebSocket with the ephemeral token
@@ -146,7 +161,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       // Send setup (model + audio response + Tillu's system instruction)
       ws.send(JSON.stringify({
         setup: {
-          model: MODEL,
+          model,
           generationConfig: { responseModalities: ["AUDIO"] },
           tools: LIVE_TOOLS,
           // Less trigger-happy interruption: only cut off on a clear, sustained voice
@@ -163,7 +178,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
           ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
         },
       }));
-      startMic();
+      if (!procRef.current) startMic(); // mic set up once; survives fallback retry
       setState("live");
     };
 
@@ -175,10 +190,13 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     };
 
     ws.onerror = () => {
-      if (liveRef.current) { setError("Connection error. Try again."); setState("error"); }
+      if (maybeFallback()) return;
+      if (liveRef.current && !setupOkRef.current) { setError("Connection error. Try again."); setState("error"); }
     };
-    ws.onclose = () => {
-      if (liveRef.current && state === "live") { setState("ended"); }
+    ws.onclose = (e) => {
+      // A close before setup completed usually means the model failed → fall back
+      if (e.code !== 1000 && maybeFallback()) return;
+      if (liveRef.current && setupOkRef.current) { setState("ended"); }
     };
   };
 
@@ -275,10 +293,11 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     setDbg((d) => ({ ...d, rx: d.rx + 1 }));
 
     if (msg.error?.message) {
+      if (maybeFallback()) return;
       if (liveRef.current) { setError(msg.error.message); setState("error"); }
       return;
     }
-    if (msg.setupComplete) return; // handshake ok
+    if (msg.setupComplete) { setupOkRef.current = true; return; } // handshake ok
 
     if (msg.toolCall?.functionCalls?.length) {
       void handleToolCall(msg.toolCall.functionCalls);
