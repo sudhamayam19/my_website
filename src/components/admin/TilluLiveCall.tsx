@@ -10,6 +10,19 @@ const WS_BASE =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
 const PRIMARY_MODEL = "models/gemini-3.1-flash-live-preview";        // fast, preview
 const FALLBACK_MODEL = "models/gemini-2.5-flash-native-audio-latest"; // stable
+
+// Shared memory with the text chat (same localStorage key as TilluWebChat)
+const MEMORY_KEY = "tillu_web_memory_v1";
+function loadMemory(): string[] {
+  try { return JSON.parse(localStorage.getItem(MEMORY_KEY) ?? "[]") as string[]; } catch { return []; }
+}
+function rememberIdea(text: string) {
+  const clean = text.trim();
+  if (!clean || clean.length < 3) return;
+  const mem = loadMemory();
+  if (mem.includes(clean)) return;
+  localStorage.setItem(MEMORY_KEY, JSON.stringify([...mem, clean].slice(-60)));
+}
 const IN_RATE = 16000;   // mic → Gemini
 const OUT_RATE = 24000;  // Gemini → speaker
 
@@ -67,6 +80,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
   const triedFallbackRef = useRef(false);
   const [visual, setVisual] = useState<"none" | "camera" | "screen">("none");
   const [typed, setTyped] = useState("");
+  const [micOff, setMicOff] = useState(false);
   const visualStreamRef = useRef<MediaStream | null>(null);
   const videoElRef = useRef<HTMLVideoElement | null>(null);
   const frameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -167,6 +181,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text }] }], turnComplete: true } }));
     addTranscript("you", text);
+    rememberIdea(text);
     lastRoleRef.current = null;
     setTyped("");
   };
@@ -207,20 +222,24 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       if (!data.token) throw new Error(data.error ?? "No token");
       token = data.token;
       systemInstruction = data.systemInstruction ?? "";
+      // Inject shared memory from the text chat so the call remembers past ideas
+      const mem = loadMemory();
+      if (mem.length > 0) {
+        systemInstruction += `\n\nTHINGS YOU & AKKA WORKED ON BEFORE (remember these across chat and calls):\n${mem.map((m) => `• ${m}`).join("\n")}`;
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Token error");
       setState("error");
       return;
     }
 
-    // 2. Mic permission + capture context (reuse existing stream on fallback retry)
+    // 2. Try mic — but if it's blocked, still connect so text + camera work
     if (!streamRef.current) {
       try {
         streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
       } catch {
-        setError("Microphone permission needed for the call.");
-        setState("error");
-        return;
+        streamRef.current = null; // no mic → text-only mode, don't abort the call
+        setMicOff(true);
       }
     }
 
@@ -249,7 +268,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
           ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
         },
       }));
-      if (!procRef.current) startMic(); // mic set up once; survives fallback retry
+      if (streamRef.current && !procRef.current) startMic(); // mic optional; survives fallback retry
       setState("live");
     };
 
@@ -395,6 +414,9 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       }
     }
     if (sc.turnComplete) {
+      // Save the most recent spoken "you" turn into shared memory (chat + call)
+      const lastYou = [...turnsRef.current].reverse().find((t) => t.role === "you");
+      if (lastYou) rememberIdea(lastYou.text);
       lastRoleRef.current = null; // next transcript chunk starts a fresh line
       setTimeout(() => setTilluSpeaking(false), 150);
     }
@@ -462,7 +484,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       <p className="mt-2 text-lg font-bold text-white">Tillu</p>
       <p className="mt-0.5 text-xs font-semibold text-[#9ec7cc]">
         {state === "connecting" && "Connecting… 📞"}
-        {state === "live" && (tilluSpeaking ? "🔊 Tillu maatladtundi…" : "🎙️ Vintunna Akka — maatladandi!")}
+        {state === "live" && (tilluSpeaking ? "🔊 Tillu maatladtundi…" : micOff ? "⌨️ Mic off — type below to Tillu" : "🎙️ Vintunna Akka — maatladandi!")}
         {state === "ended" && "Call ended"}
         {state === "error" && `⚠️ ${error}`}
         {state === "live" && `  ·  ${mmss(secs)}`}
