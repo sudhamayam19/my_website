@@ -396,7 +396,7 @@ export async function fetchSubscribers(): Promise<NewsletterSubscriber[]> {
   return data.subscribers;
 }
 
-export interface GeminiPart { text: string }
+export type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
 export interface GeminiMessage { role: "user" | "model"; parts: GeminiPart[] }
 export interface GeminiTodo { id: string; text: string; dueDate?: string; completed: boolean }
 export interface GeminiChatResult {

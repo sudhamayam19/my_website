@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
+import * as ImagePicker from "expo-image-picker";
 import Markdown from "react-native-markdown-display";
 import * as Notifications from "expo-notifications";
 import * as Speech from "expo-speech";
@@ -9,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -67,9 +69,22 @@ const C = {
 interface Msg {
   role: "user" | "assistant";
   content: string;
+  image?: string; // data URI for preview
 }
 
 const HISTORY_KEY = "tillu_chat_history_v1";
+const MEMORY_KEY  = "tillu_mobile_memory_v1";
+
+async function loadMemory(): Promise<string[]> {
+  try { return JSON.parse((await AsyncStorage.getItem(MEMORY_KEY)) ?? "[]") as string[]; } catch { return []; }
+}
+async function rememberIdea(text: string): Promise<void> {
+  const clean = text.trim();
+  if (clean.length < 3) return;
+  const mem = await loadMemory();
+  if (mem.includes(clean)) return;
+  await AsyncStorage.setItem(MEMORY_KEY, JSON.stringify([...mem, clean].slice(-60)));
+}
 
 function getTilluWelcome(): string {
   const hour = new Date().getHours();
@@ -182,8 +197,15 @@ function Bubble({ msg, index, onSpeak, speaking }: {
         </View>
       )}
       {isUser && (
-        <View style={[S.bubble, S.userBubble]}>
-          <Text style={[S.bubbleText, { color: C.white }]}>{msg.content}</Text>
+        <View style={{ alignItems: "flex-end" }}>
+          {msg.image && (
+            <Image source={{ uri: msg.image }} style={S.bubbleImage} />
+          )}
+          {!!msg.content && (
+            <View style={[S.bubble, S.userBubble]}>
+              <Text style={[S.bubbleText, { color: C.white }]}>{msg.content}</Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -242,6 +264,7 @@ export default function AssistantTab() {
   const [speaking, setSpeaking] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
   const [newTask, setNewTask]   = useState("");
+  const [attached, setAttached] = useState<{ dataUri: string; mimeType: string; data: string } | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const overdueTodos = todos.filter(t => {
@@ -273,23 +296,33 @@ export default function AssistantTab() {
 
   const send = useCallback(async (override?: string) => {
     const text = (override ?? input).trim();
-    if (!text || sending) return;
+    const img = attached;
+    if ((!text && !img) || sending) return;
 
-    const userMsg: Msg = { role: "user", content: text };
+    const userMsg: Msg = { role: "user", content: text || "📷 (image)", image: img?.dataUri };
     const history = [...msgs, userMsg];
     setMsgs(history);
     setInput("");
+    setAttached(null);
     setSending(true);
+    if (text) void rememberIdea(text);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
 
     try {
-      const geminiHistory: GeminiMessage[] = history
-        .filter((m) => m.content !== getTilluWelcome())
-        .slice(-14)
-        .map((m) => ({
-          role: m.role === "assistant" ? "model" : "user",
-          parts: [{ text: m.content }],
-        }));
+      const mem = await loadMemory();
+      const geminiHistory: GeminiMessage[] = [];
+      if (mem.length > 0) {
+        geminiHistory.push({ role: "user", parts: [{ text: `[MEMORY — topics we've worked on before]:\n${mem.map((m) => `• ${m}`).join("\n")}` }] });
+        geminiHistory.push({ role: "model", parts: [{ text: "Gurtupettukunna Akka! 🧠" }] });
+      }
+      const recent = history.filter((m) => m.content !== getTilluWelcome()).slice(-14);
+      recent.forEach((m, idx) => {
+        const parts: GeminiMessage["parts"] = [];
+        if (idx === recent.length - 1 && img) parts.push({ inlineData: { mimeType: img.mimeType, data: img.data } });
+        if (m.content) parts.push({ text: m.content });
+        if (parts.length === 0) parts.push({ text: "(image)" });
+        geminiHistory.push({ role: m.role === "assistant" ? "model" : "user", parts });
+      });
 
       const result = await sendGeminiChat(geminiHistory, todos);
 
@@ -309,7 +342,20 @@ export default function AssistantTab() {
       setSending(false);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
     }
-  }, [input, msgs, sending, todos]);
+  }, [input, msgs, sending, todos, attached]);
+
+  const pickImage = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Permission needed", "Allow photo access to attach images."); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      base64: true, quality: 0.6,
+    });
+    if (res.canceled || !res.assets?.[0]?.base64) return;
+    const a = res.assets[0];
+    const mimeType = a.mimeType ?? "image/jpeg";
+    setAttached({ dataUri: `data:${mimeType};base64,${a.base64}`, mimeType, data: a.base64! });
+  }, []);
 
   const toggleListen = async () => {
     if (listening) {
@@ -459,7 +505,19 @@ export default function AssistantTab() {
             </ScrollView>
           )}
 
+          {attached && (
+            <View style={S.attachPreview}>
+              <Image source={{ uri: attached.dataUri }} style={S.attachThumb} />
+              <Pressable onPress={() => setAttached(null)} hitSlop={8}>
+                <Text style={{ color: C.orange, fontSize: 12, fontWeight: "700" }}>Remove</Text>
+              </Pressable>
+            </View>
+          )}
+
           <View style={[S.inputBar, { paddingBottom: Math.max(insets.bottom, 10) + 4 }]}>
+            <Pressable onPress={() => void pickImage()} style={S.iconBtn} hitSlop={8}>
+              <Ionicons name="image-outline" size={21} color={C.slateLight} />
+            </Pressable>
             <TextInput
               style={S.input}
               value={input}
@@ -488,9 +546,9 @@ export default function AssistantTab() {
               </View>
             ) : (
               <Pressable
-                style={[S.sendBtn, !input.trim() && { backgroundColor: C.sand }]}
+                style={[S.sendBtn, (!input.trim() && !attached) && { backgroundColor: C.sand }]}
                 onPress={() => void send()}
-                disabled={!input.trim()}
+                disabled={!input.trim() && !attached}
               >
                 <Ionicons name="send" size={17} color={C.white} />
               </Pressable>
@@ -587,6 +645,9 @@ const S = StyleSheet.create({
   userBubble:     { alignSelf: "flex-end", backgroundColor: C.teal, borderBottomRightRadius: 5 },
   aiBubble:       { alignSelf: "flex-start", backgroundColor: C.white, borderWidth: 1, borderColor: C.sandLight, borderBottomLeftRadius: 5 },
   bubbleText:     { fontSize: 14, lineHeight: 22 },
+  bubbleImage:    { width: 180, height: 180, borderRadius: 16, marginBottom: 4, borderWidth: 1, borderColor: C.sandLight },
+  attachPreview:  { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, paddingBottom: 6 },
+  attachThumb:    { width: 52, height: 52, borderRadius: 10, borderWidth: 1, borderColor: C.sand },
   speakBtn:       { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, marginLeft: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, backgroundColor: C.cream, borderWidth: 1, borderColor: C.sandLight },
   speakText:      { fontSize: 11, color: C.slate, fontWeight: "600" },
   dot:            { width: 7, height: 7, borderRadius: 4, backgroundColor: C.sandLight },
