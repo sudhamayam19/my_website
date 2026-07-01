@@ -8,7 +8,7 @@ type CallState = "connecting" | "live" | "ended" | "error";
 // Ephemeral tokens require the Constrained endpoint
 const WS_BASE =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
-const MODEL = "models/gemini-2.5-flash-native-audio-latest";
+const MODEL = "models/gemini-3.1-flash-live-preview";
 const IN_RATE = 16000;   // mic → Gemini
 const OUT_RATE = 24000;  // Gemini → speaker
 

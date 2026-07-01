@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/api-auth";
 import { getBlogPosts, getPodcastEpisodes } from "@/lib/content-store";
 
-const LIVE_MODEL = "models/gemini-2.5-flash-native-audio-latest";
+const LIVE_MODEL = "models/gemini-3.1-flash-live-preview";
 
 const TILLU_LIVE_PROMPT = `You are Tillu 🤖 — Sudha Devarakonda's personal AI creative buddy, talking to her live on a voice call.
 
