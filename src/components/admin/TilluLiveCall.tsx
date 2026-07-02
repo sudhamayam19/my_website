@@ -11,6 +11,7 @@ const WS_BASE =
   "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained";
 const PRIMARY_MODEL = "models/gemini-3.1-flash-live-preview";        // fast, preview
 const FALLBACK_MODEL = "models/gemini-2.5-flash-native-audio-latest"; // stable
+const TILLU_VOICE = "Leda"; // one consistent voice for Tillu on every call
 
 // Shared memory with the text chat (same localStorage key as TilluWebChat)
 const MEMORY_KEY = "tillu_web_memory_v1";
@@ -263,7 +264,11 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       ws.send(JSON.stringify({
         setup: {
           model,
-          generationConfig: { responseModalities: ["AUDIO"] },
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            // Pin ONE consistent voice for Tillu across every call
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: TILLU_VOICE } } },
+          },
           tools: LIVE_TOOLS,
           // Less trigger-happy interruption: only cut off on a clear, sustained voice
           realtimeInputConfig: {
