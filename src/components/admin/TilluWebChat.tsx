@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { TilluLiveCall } from "./TilluLiveCall";
-import { saveDoc } from "@/lib/tillu-corner";
+import { saveDoc, archiveChat } from "@/lib/tillu-corner";
 
 type TilluPose = "idle" | "wave" | "mic" | "idea";
 function TilluImg({ pose, size }: { pose: TilluPose; size: number }) {
@@ -250,6 +250,8 @@ export function TilluWebChat() {
 
   // Start a fresh chat — keeps MEMORY, only clears the visible thread
   const newChat = () => {
+    // Archive the current conversation before clearing it
+    archiveChat(msgs.filter((m) => m.text !== WELCOME).map((m) => ({ role: m.role === "assistant" ? "assistant" as const : "user" as const, text: m.text })));
     setMsgs([{ role: "assistant", text: WELCOME }]);
     localStorage.removeItem(CURRENT_KEY);
   };

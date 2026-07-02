@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  TilluCall, TilluDoc, getCalls, getDocs, deleteCall, deleteDoc,
-  downloadText, callToText,
+  TilluCall, TilluDoc, TilluChat, getCalls, getDocs, getChats, deleteCall, deleteDoc, deleteChat,
+  downloadText, callToText, chatToText,
 } from "@/lib/tillu-corner";
 
 function fmt(iso: string): string {
@@ -14,13 +14,14 @@ function fmt(iso: string): string {
 function mmss(s: number): string { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
 
 export function TilluCorner() {
-  const [tab, setTab] = useState<"scripts" | "calls">("scripts");
+  const [tab, setTab] = useState<"scripts" | "chats" | "calls">("scripts");
   const [docs, setDocs] = useState<TilluDoc[]>([]);
   const [calls, setCalls] = useState<TilluCall[]>([]);
+  const [chats, setChats] = useState<TilluChat[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  useEffect(() => { setDocs(getDocs()); setCalls(getCalls()); }, []);
+  useEffect(() => { setDocs(getDocs()); setCalls(getCalls()); setChats(getChats()); }, []);
 
   const copy = async (id: string, text: string) => {
     try { await navigator.clipboard.writeText(text); setCopied(id); setTimeout(() => setCopied((c) => (c === id ? null : c)), 1500); } catch { /* */ }
@@ -43,12 +44,12 @@ export function TilluCorner() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {(["scripts", "calls"] as const).map((t) => (
+        {(["scripts", "chats", "calls"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={`rounded-full px-4 py-2 text-sm font-bold transition ${
               tab === t ? "bg-[#1f6973] text-white" : "border border-[#d3c1a8] text-[#5f6f79] hover:border-[#1f6973]"
             }`}>
-            {t === "scripts" ? `📝 Scripts (${docs.length})` : `📞 Calls (${calls.length})`}
+            {t === "scripts" ? `📝 Scripts (${docs.length})` : t === "chats" ? `💬 Chats (${chats.length})` : `📞 Calls (${calls.length})`}
           </button>
         ))}
       </div>
@@ -74,6 +75,40 @@ export function TilluCorner() {
                 </div>
                 {open === d.id && (
                   <pre className="mt-3 whitespace-pre-wrap border-t border-[#e8dece] pt-3 text-sm text-[#374b54] font-sans">{d.content}</pre>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Chats */}
+      {tab === "chats" && (
+        chats.length === 0 ? (
+          <Empty text="No past chats yet. When you tap “New chat” in Tillu, the old conversation is saved here." />
+        ) : (
+          <div className="space-y-2">
+            {chats.map((c) => (
+              <div key={c.id} className="rounded-2xl border border-[#e0d4c0] bg-[#fffaf2] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <button onClick={() => setOpen(open === c.id ? null : c.id)} className="flex-1 text-left">
+                    <p className="font-semibold text-[#1f2d39] truncate">💬 {c.msgs.find((m) => m.role === "user")?.text.slice(0, 50) || "Chat"}</p>
+                    <p className="text-xs text-[#8fa3ad]">{fmt(c.date)} · {c.msgs.length} messages</p>
+                  </button>
+                  <div className="flex shrink-0 gap-1.5">
+                    <IconBtn label={copied === c.id ? "✓" : "Copy"} onClick={() => void copy(c.id, chatToText(c))} />
+                    <IconBtn label="⬇︎" onClick={() => downloadText(`tillu-chat-${c.id}.txt`, chatToText(c))} />
+                    <IconBtn label="✕" danger onClick={() => { deleteChat(c.id); setChats(getChats()); }} />
+                  </div>
+                </div>
+                {open === c.id && (
+                  <div className="mt-3 space-y-2 border-t border-[#e8dece] pt-3">
+                    {c.msgs.map((m, i) => (
+                      <p key={i} className={`text-sm ${m.role === "user" ? "text-[#1f6973] font-medium" : "text-[#374b54]"}`}>
+                        <span className="font-bold">{m.role === "user" ? "Akka: " : "Tillu: "}</span>{m.text}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </div>
             ))}

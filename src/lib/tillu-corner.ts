@@ -17,8 +17,15 @@ export interface TilluDoc {
   source: "chat" | "call";
 }
 
+export interface TilluChat {
+  id: string;
+  date: string;
+  msgs: { role: "user" | "assistant"; text: string }[];
+}
+
 const CALLS_KEY = "tillu_call_history_v1";
 const DOCS_KEY = "tillu_docs_v1";
+const CHATS_KEY = "tillu_chat_archive_v1";
 
 function read<T>(key: string): T[] {
   try { return JSON.parse(localStorage.getItem(key) ?? "[]") as T[]; } catch { return []; }
@@ -54,6 +61,23 @@ export function saveDoc(doc: Omit<TilluDoc, "id" | "date">): TilluDoc {
 }
 export function deleteDoc(id: string): void {
   write<TilluDoc>(DOCS_KEY, read<TilluDoc>(DOCS_KEY).filter((d) => d.id !== id));
+}
+
+// ── Chat archive ──
+export function getChats(): TilluChat[] {
+  return read<TilluChat>(CHATS_KEY).sort((a, b) => b.date.localeCompare(a.date));
+}
+export function archiveChat(msgs: TilluChat["msgs"]): void {
+  const real = msgs.filter((m) => m.role === "user"); // only save chats with actual user input
+  if (real.length === 0) return;
+  write<TilluChat>(CHATS_KEY, [...read<TilluChat>(CHATS_KEY), { id: makeId(), date: new Date().toISOString(), msgs }]);
+}
+export function deleteChat(id: string): void {
+  write<TilluChat>(CHATS_KEY, read<TilluChat>(CHATS_KEY).filter((c) => c.id !== id));
+}
+export function chatToText(c: TilluChat): string {
+  const d = new Date(c.date).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+  return `Tillu Chat — ${d}\n\n${c.msgs.map((m) => `${m.role === "user" ? "Akka" : "Tillu"}: ${m.text}`).join("\n\n")}`;
 }
 
 // ── Helpers ──
