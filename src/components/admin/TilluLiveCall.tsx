@@ -58,7 +58,10 @@ function bytesFromB64(b64: string): Uint8Array {
   return out;
 }
 
-export function TilluLiveCall({ onClose }: { onClose: () => void }) {
+export function TilluLiveCall({ onClose, authToken }: { onClose: () => void; authToken?: string }) {
+  // When opened outside the admin cookie session (e.g. from the mobile app), auth via bearer token
+  const authHeaders = (): HeadersInit =>
+    authToken ? { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` } : { "Content-Type": "application/json" };
   const [state, setState] = useState<CallState>("connecting");
   const [error, setError] = useState("");
   const [tilluSpeaking, setTilluSpeaking] = useState(false);
@@ -221,7 +224,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
     let token = "";
     let systemInstruction = "";
     try {
-      const res = await fetch("/api/mobile/tillu-live-token", { method: "POST", credentials: "same-origin" });
+      const res = await fetch("/api/mobile/tillu-live-token", { method: "POST", credentials: "same-origin", headers: authHeaders() });
       const data = await res.json() as { token?: string; systemInstruction?: string; error?: string };
       if (!data.token) throw new Error(data.error ?? "No token");
       token = data.token;
@@ -363,7 +366,7 @@ export function TilluLiveCall({ onClose }: { onClose: () => void }) {
       let result: unknown = { error: "failed" };
       try {
         const res = await fetch("/api/mobile/tillu-tool", {
-          method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+          method: "POST", headers: authHeaders(), credentials: "same-origin",
           body: JSON.stringify({ name: c.name, args: c.args }),
         });
         const data = await res.json() as { result?: unknown };

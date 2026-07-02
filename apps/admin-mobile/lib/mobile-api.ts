@@ -95,6 +95,13 @@ async function getToken(): Promise<string | null> {
   return await SecureStore.getItemAsync(TOKEN_KEY);
 }
 
+// URL for the web-based Gemini Live call, authed via the stored admin token
+export async function getTilluCallUrl(): Promise<string | null> {
+  const token = await getToken();
+  if (!token) return null;
+  return `${getApiBaseUrl()}/tillu-call?token=${encodeURIComponent(token)}`;
+}
+
 export async function saveToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
 }

@@ -12,6 +12,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -29,7 +30,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GeminiMessage, sendGeminiChat } from "../../lib/mobile-api";
+import { GeminiMessage, sendGeminiChat, getTilluCallUrl } from "../../lib/mobile-api";
 import {
   Todo,
   addTodo,
@@ -412,6 +413,15 @@ export default function AssistantTab() {
     }},
   ]);
 
+  const callTillu = async () => {
+    const url = await getTilluCallUrl();
+    if (!url) { Alert.alert("Not signed in", "Please sign in again to call Tillu."); return; }
+    Alert.alert("Call Tillu 📞", "Voice call opens in your browser (Chrome recommended). Allow the mic when asked!", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Call", onPress: () => void Linking.openURL(url) },
+    ]);
+  };
+
   const askTilluAboutOverdue = () => {
     const overdueNames = overdueTodos.map(t => t.text).join(", ");
     void send(`Tillu, I have ${overdueTodos.length} overdue task(s): ${overdueNames}. Help me!`);
@@ -461,6 +471,9 @@ export default function AssistantTab() {
             <Text style={S.tilluName}>Tillu</Text>
             <Text style={S.tilluSub}>AI Creative Buddy</Text>
           </View>
+          <Pressable onPress={() => void callTillu()} hitSlop={12} style={S.callBtn}>
+            <Ionicons name="call" size={16} color={C.white} />
+          </Pressable>
           {view === "chat" && (
             <Pressable onPress={clearChat} hitSlop={12}>
               <Ionicons name="create-outline" size={20} color={C.teal} />
@@ -636,6 +649,7 @@ const S = StyleSheet.create({
   viewTabTextActive: { color: C.teal },
   badge:          { backgroundColor: C.teal, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
   badgeText:      { fontSize: 10, fontWeight: "800", color: C.white },
+  callBtn:        { width: 30, height: 30, borderRadius: 15, backgroundColor: C.teal, alignItems: "center", justifyContent: "center" },
   tilluName:      { fontSize: 13, fontWeight: "800", color: C.ink },
   tilluSub:       { fontSize: 10, color: C.slateLight, fontWeight: "600" },
   overdueBanner:  { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.orangeLight, borderBottomWidth: 1, borderBottomColor: "#f0c8a8", paddingHorizontal: 16, paddingVertical: 10 },
