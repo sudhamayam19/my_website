@@ -194,18 +194,38 @@ export function TilluWebChat() {
       .replace(/\n{2,}/g, ". ")
       .trim();
     if (!clean) { if (voiceModeRef.current) startVoiceListen(); return; }
+
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(clean);
-    u.lang = "en-IN";
+
+    // Chrome's speechSynthesis silently fails / cuts off on long text (e.g. a recitation).
+    // Split into sentence-sized chunks and queue them so the WHOLE thing is spoken.
+    const chunks = clean
+      .split(/(?<=[.!?。！？\n])\s+/)
+      .flatMap((s) => (s.length <= 180 ? [s] : s.match(/[^,;]+[,;]?|.+/g) ?? [s]))
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     const voices = window.speechSynthesis.getVoices();
     const indian = voices.find((v) => /en-IN|hi-IN|te-IN/i.test(v.lang));
-    if (indian) u.voice = indian;
-    u.rate = 1.02;
-    u.pitch = 1.1;
-    u.onstart = () => setSpeaking(true);
-    u.onend = () => { setSpeaking(false); if (voiceModeRef.current) startVoiceListen(); };
-    u.onerror = () => { setSpeaking(false); if (voiceModeRef.current) startVoiceListen(); };
-    window.speechSynthesis.speak(u);
+
+    let i = 0;
+    const speakNext = () => {
+      if (i >= chunks.length) {
+        setSpeaking(false);
+        if (voiceModeRef.current) startVoiceListen();
+        return;
+      }
+      const u = new SpeechSynthesisUtterance(chunks[i++]);
+      u.lang = "en-IN";
+      if (indian) u.voice = indian;
+      u.rate = 1.02;
+      u.pitch = 1.1;
+      u.onstart = () => setSpeaking(true);
+      u.onend = speakNext;              // chain to the next chunk
+      u.onerror = speakNext;            // skip a failed chunk, keep going
+      window.speechSynthesis.speak(u);
+    };
+    speakNext();
   };
 
   // One listen cycle for hands-free voice mode → auto-sends final transcript

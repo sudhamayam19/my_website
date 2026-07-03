@@ -375,7 +375,13 @@ export default function AssistantTab() {
   const speakMsg = (text: string, i: number) => {
     if (speaking === i) { Speech.stop(); setSpeaking(null); }
     else {
-      Speech.speak(text, {
+      const clean = text
+        .replace(/[*#_`>]/g, "")
+        .replace(/\p{Extended_Pictographic}/gu, "")
+        .replace(/\n{2,}/g, ". ")
+        .trim();
+      Speech.stop(); // clear any queued/stuck utterance first
+      Speech.speak(clean || text, {
         language: "en-IN",
         onDone: () => setSpeaking(null),
         onError: () => setSpeaking(null),
