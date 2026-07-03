@@ -12,7 +12,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
-  Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -21,6 +21,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -266,6 +267,7 @@ export default function AssistantTab() {
   const [listening, setListening] = useState(false);
   const [newTask, setNewTask]   = useState("");
   const [attached, setAttached] = useState<{ dataUri: string; mimeType: string; data: string } | null>(null);
+  const [callUrl, setCallUrl] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   const overdueTodos = todos.filter(t => {
@@ -416,10 +418,7 @@ export default function AssistantTab() {
   const callTillu = async () => {
     const url = await getTilluCallUrl();
     if (!url) { Alert.alert("Not signed in", "Please sign in again to call Tillu."); return; }
-    Alert.alert("Call Tillu 📞", "Voice call opens in your browser (Chrome recommended). Allow the mic when asked!", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Call", onPress: () => void Linking.openURL(url) },
-    ]);
+    setCallUrl(url); // opens the in-app call screen
   };
 
   const askTilluAboutOverdue = () => {
@@ -443,6 +442,28 @@ export default function AssistantTab() {
       style={{ flex: 1, backgroundColor: C.paper }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {/* ── In-app Tillu Live call (WebView) ── */}
+      <Modal visible={!!callUrl} animationType="slide" onRequestClose={() => setCallUrl(null)}>
+        <View style={{ flex: 1, backgroundColor: "#0c2830", paddingTop: insets.top }}>
+          <Pressable onPress={() => setCallUrl(null)} style={S.callClose} hitSlop={10}>
+            <Ionicons name="chevron-down" size={26} color="#fff" />
+          </Pressable>
+          {callUrl && (
+            <WebView
+              source={{ uri: callUrl }}
+              style={{ flex: 1, backgroundColor: "#0c2830" }}
+              javaScriptEnabled
+              domStorageEnabled
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              mediaCapturePermissionGrantType="grant"
+              onPermissionRequest={(e) => e.nativeEvent.grant?.(e.nativeEvent.resources)}
+              originWhitelist={["*"]}
+            />
+          )}
+        </View>
+      </Modal>
+
       {/* ── Tillu Header ── */}
       <View style={[S.header, { paddingTop: insets.top + 8 }]}>
         <View style={{ flexDirection: "row", gap: 0 }}>
@@ -650,6 +671,7 @@ const S = StyleSheet.create({
   badge:          { backgroundColor: C.teal, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
   badgeText:      { fontSize: 10, fontWeight: "800", color: C.white },
   callBtn:        { width: 30, height: 30, borderRadius: 15, backgroundColor: C.teal, alignItems: "center", justifyContent: "center" },
+  callClose:      { alignSelf: "flex-start", padding: 12 },
   tilluName:      { fontSize: 13, fontWeight: "800", color: C.ink },
   tilluSub:       { fontSize: 10, color: C.slateLight, fontWeight: "600" },
   overdueBanner:  { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.orangeLight, borderBottomWidth: 1, borderBottomColor: "#f0c8a8", paddingHorizontal: 16, paddingVertical: 10 },
