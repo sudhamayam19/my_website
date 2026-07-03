@@ -419,3 +419,15 @@ export async function sendGeminiChat(messages: GeminiMessage[], todos: GeminiTod
     body: JSON.stringify({ messages, todos }),
   });
 }
+
+// ── Native Tillu Live call ──
+export interface TilluLiveToken { token: string; model: string; systemInstruction?: string }
+export async function fetchTilluLiveToken(): Promise<TilluLiveToken> {
+  return await apiRequest<TilluLiveToken>("/api/mobile/tillu-live-token", { method: "POST" });
+}
+export async function executeTilluTool(name: string, args: Record<string, string>): Promise<{ result: unknown }> {
+  return await apiRequest<{ result: unknown }>("/api/mobile/tillu-tool", {
+    method: "POST",
+    body: JSON.stringify({ name, args }),
+  });
+}

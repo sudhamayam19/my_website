@@ -21,7 +21,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { WebView } from "react-native-webview";
+import { TilluNativeCall } from "../../components/TilluNativeCall";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -31,7 +31,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { GeminiMessage, sendGeminiChat, getTilluCallUrl } from "../../lib/mobile-api";
+import { GeminiMessage, sendGeminiChat } from "../../lib/mobile-api";
 import {
   Todo,
   addTodo,
@@ -267,7 +267,7 @@ export default function AssistantTab() {
   const [listening, setListening] = useState(false);
   const [newTask, setNewTask]   = useState("");
   const [attached, setAttached] = useState<{ dataUri: string; mimeType: string; data: string } | null>(null);
-  const [callUrl, setCallUrl] = useState<string | null>(null);
+  const [showCall, setShowCall] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const overdueTodos = todos.filter(t => {
@@ -415,11 +415,7 @@ export default function AssistantTab() {
     }},
   ]);
 
-  const callTillu = async () => {
-    const url = await getTilluCallUrl();
-    if (!url) { Alert.alert("Not signed in", "Please sign in again to call Tillu."); return; }
-    setCallUrl(url); // opens the in-app call screen
-  };
+  const callTillu = () => setShowCall(true); // native in-app voice call
 
   const askTilluAboutOverdue = () => {
     const overdueNames = overdueTodos.map(t => t.text).join(", ");
@@ -442,26 +438,9 @@ export default function AssistantTab() {
       style={{ flex: 1, backgroundColor: C.paper }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      {/* ── In-app Tillu Live call (WebView) ── */}
-      <Modal visible={!!callUrl} animationType="slide" onRequestClose={() => setCallUrl(null)}>
-        <View style={{ flex: 1, backgroundColor: "#0c2830", paddingTop: insets.top }}>
-          <Pressable onPress={() => setCallUrl(null)} style={S.callClose} hitSlop={10}>
-            <Ionicons name="chevron-down" size={26} color="#fff" />
-          </Pressable>
-          {callUrl && (
-            <WebView
-              source={{ uri: callUrl }}
-              style={{ flex: 1, backgroundColor: "#0c2830" }}
-              javaScriptEnabled
-              domStorageEnabled
-              allowsInlineMediaPlayback
-              mediaPlaybackRequiresUserAction={false}
-              mediaCapturePermissionGrantType="grant"
-              onPermissionRequest={(e) => e.nativeEvent.grant?.(e.nativeEvent.resources)}
-              originWhitelist={["*"]}
-            />
-          )}
-        </View>
+      {/* ── In-app Tillu Live call (native audio) ── */}
+      <Modal visible={showCall} animationType="slide" onRequestClose={() => setShowCall(false)}>
+        {showCall && <TilluNativeCall onClose={() => setShowCall(false)} />}
       </Modal>
 
       {/* ── Tillu Header ── */}
@@ -492,7 +471,7 @@ export default function AssistantTab() {
             <Text style={S.tilluName}>Tillu</Text>
             <Text style={S.tilluSub}>AI Creative Buddy</Text>
           </View>
-          <Pressable onPress={() => void callTillu()} hitSlop={12} style={S.callBtn}>
+          <Pressable onPress={callTillu} hitSlop={12} style={S.callBtn}>
             <Ionicons name="call" size={16} color={C.white} />
           </Pressable>
           {view === "chat" && (
