@@ -66,10 +66,12 @@ export function TilluLiveCall({ onClose, authToken }: { onClose: () => void; aut
   const [error, setError] = useState("");
   const [tilluSpeaking, setTilluSpeaking] = useState(false);
   const [dbg, setDbg] = useState({ rx: 0, audio: 0, txKb: 0 });
-  const [turns, setTurns] = useState<{ role: "you" | "tillu"; text: string }[]>([]);
+  const [turns, setTurns] = useState<{ role: "you" | "tillu"; text: string; who?: string }[]>([]);
+  const [speaker, setSpeaker] = useState("Akka");
+  const speakerRef = useRef("Akka");
   const [secs, setSecs] = useState(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const turnsRef = useRef<{ role: "you" | "tillu"; text: string }[]>([]);
+  const turnsRef = useRef<{ role: "you" | "tillu"; text: string; who?: string }[]>([]);
   const lastRoleRef = useRef<"you" | "tillu" | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -114,14 +116,25 @@ export function TilluLiveCall({ onClose, authToken }: { onClose: () => void; aut
   const addTranscript = (role: "you" | "tillu", chunk: string) => {
     if (!chunk) return;
     const arr = turnsRef.current;
+    const who = role === "you" ? speakerRef.current : undefined;
     if (lastRoleRef.current === role && arr.length > 0 && arr[arr.length - 1].role === role) {
-      arr[arr.length - 1] = { role, text: arr[arr.length - 1].text + chunk };
+      arr[arr.length - 1] = { role, text: arr[arr.length - 1].text + chunk, who };
     } else {
-      arr.push({ role, text: chunk });
+      arr.push({ role, text: chunk, who });
       lastRoleRef.current = role;
     }
     turnsRef.current = [...arr];
     setTurns(turnsRef.current);
+  };
+
+  // Manual "who's speaking" — labels transcript and tells Tillu to address the right person
+  const switchSpeaker = (name: string) => {
+    setSpeaker(name);
+    speakerRef.current = name;
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ clientContent: { turns: [{ role: "user", parts: [{ text: `[Speaker note: the person talking now is ${name}. Address them accordingly.]` }] }], turnComplete: true } }));
+    }
   };
 
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -509,9 +522,27 @@ export function TilluLiveCall({ onClose, authToken }: { onClose: () => void; aut
         {state === "live" && `  ·  ${mmss(secs)}`}
       </p>
 
+      {/* Who's speaking toggle */}
+      {state === "live" && (
+        <div className="mt-3 flex items-center gap-1.5">
+          <span className="text-[11px] text-[#5f8288]">Speaking:</span>
+          {["Akka", "Son"].map((n) => (
+            <button
+              key={n}
+              onClick={() => switchSpeaker(n)}
+              className={`rounded-full px-3 py-1 text-[11px] font-bold transition ${
+                speaker === n ? "bg-[#1f6973] text-white" : "border border-[#3a5a62] text-[#9ec7cc]"
+              }`}
+            >
+              {n === "Akka" ? "👩 Akka" : "🧑 Son"}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Live transcript */}
       {state === "live" && (
-        <div className="mt-4 w-full max-w-md flex-1 overflow-y-auto rounded-2xl border border-[#1f4a52] bg-[#0a2026]/60 p-3 space-y-2">
+        <div className="mt-2 w-full max-w-md flex-1 overflow-y-auto rounded-2xl border border-[#1f4a52] bg-[#0a2026]/60 p-3 space-y-2">
           {turns.length === 0 ? (
             <p className="py-6 text-center text-xs text-[#5f8288]">Maatladandi Akka — your conversation appears here 📝</p>
           ) : (
@@ -521,7 +552,7 @@ export function TilluLiveCall({ onClose, authToken }: { onClose: () => void; aut
                   t.role === "you" ? "bg-[#1f6973] text-white" : "bg-[#13343c] text-[#dfeeef]"
                 }`}>
                   <span className="mb-0.5 block text-[9px] font-bold uppercase tracking-wider opacity-50">
-                    {t.role === "you" ? "Akka" : "Tillu"}
+                    {t.role === "you" ? (t.who ?? "Akka") : "Tillu"}
                   </span>
                   {t.text}
                   {t.role === "tillu" && t.text.length > 8 && (
