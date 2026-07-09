@@ -426,6 +426,34 @@ export const getDailyDose = unstable_cache(
   { revalidate: 60 },
 );
 
+// All uploaded quotes (scheduled doses + the manual dose) — for the rotating banner
+export const getDosePool = unstable_cache(
+  async (): Promise<{ text: string; author?: string; style: DailyDoseStyle }[]> => {
+    const client = getConvexClient();
+    const fallback = () => {
+      const f = getFallbackDailyDose();
+      return f.active && f.text.trim() ? [{ text: f.text, author: f.author, style: f.style }] : [];
+    };
+    if (!client) return fallback();
+    try {
+      const rows = (await client.query(api.content.getScheduledDoses, {})) as ScheduledDose[] | null;
+      const pool = (rows ?? [])
+        .filter((r) => r.text?.trim())
+        .map((r) => ({ text: r.text.trim(), author: r.author?.trim() || undefined, style: r.style }));
+      // Include the manually-set daily dose too (dedupe by text)
+      const dose = await client.query(api.content.getDailyDose, {});
+      if (dose?.active && dose.text?.trim() && !pool.some((p) => p.text === dose.text.trim())) {
+        pool.push({ text: dose.text.trim(), author: dose.author?.trim() || undefined, style: dose.style });
+      }
+      return pool.length > 0 ? pool : fallback();
+    } catch {
+      return fallback();
+    }
+  },
+  ["dose-pool"],
+  { revalidate: 60 },
+);
+
 export async function createPost(input: PostInput): Promise<{ id: string }> {
   const client = ensureConvexForWrites(getConvexClient());
   return await client.mutation(api.content.createPost, { input });
