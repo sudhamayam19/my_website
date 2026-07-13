@@ -22,6 +22,7 @@ export async function getHomeNav(options?: NavOptions): Promise<NavItem[]> {
     items.push({ label: "Media", href: "/#media" });
   }
   items.push({ label: "Press", href: "/media" });
+  items.push({ label: "Books", href: "/books" });
   items.push({ label: "Gallery", href: "/gallery" });
   if (options?.includeBlog ?? true) {
     items.push({ label: "Blog", href: "/blog" });
