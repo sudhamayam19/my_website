@@ -4,13 +4,15 @@ import { useState } from "react";
 
 interface Book3DProps {
   coverSrc?: string;   // e.g. /books/kriya-yoga-cover.jpg
+  backSrc?: string;    // e.g. /books/kriya-yoga-back.jpg
   title: string;
   author: string;      // shown on spine
 }
 
 // Auto-revolving CSS-3D book. Falls back to a styled cover if the image is missing.
-export function Book3D({ coverSrc, title, author }: Book3DProps) {
+export function Book3D({ coverSrc, backSrc, title, author }: Book3DProps) {
   const [imgOk, setImgOk] = useState(Boolean(coverSrc));
+  const [backOk, setBackOk] = useState(Boolean(backSrc));
 
   return (
     <div className="book3d-stage">
@@ -29,7 +31,12 @@ export function Book3D({ coverSrc, title, author }: Book3DProps) {
           )}
         </div>
         {/* Back cover */}
-        <div className="book3d-face book3d-back" />
+        <div className="book3d-face book3d-back">
+          {backSrc && backOk && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={backSrc} alt="" onError={() => setBackOk(false)} />
+          )}
+        </div>
         {/* Spine */}
         <div className="book3d-face book3d-spine"><span>{title}</span></div>
         {/* Right edge (pages) */}
@@ -65,7 +72,7 @@ export function Book3D({ coverSrc, title, author }: Book3DProps) {
           border-radius: 3px 6px 6px 3px;
         }
         .book3d-front { transform: translateZ(20px); background: linear-gradient(160deg,#f3ede0,#7a2d1e); }
-        .book3d-front img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .book3d-front img, .book3d-back img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .book3d-back  { transform: rotateY(180deg) translateZ(20px); background: linear-gradient(200deg,#6a1f14,#3a120b); }
         .book3d-spine {
           width: 40px; height: 320px;

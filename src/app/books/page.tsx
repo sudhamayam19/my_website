@@ -33,6 +33,7 @@ export default async function BooksPage() {
         <section className="grid items-center gap-8 md:grid-cols-2">
           <Book3D
             coverSrc="/books/kriya-yoga-cover.jpg"
+            backSrc="/books/kriya-yoga-back.jpg"
             title="క్రియా యోగ దర్శనము"
             author="స్వామి శంకరానంద గిరి"
           />
