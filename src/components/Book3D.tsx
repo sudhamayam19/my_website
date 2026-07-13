@@ -45,27 +45,39 @@ export function Book3D({ coverSrc, backSrc, title, author }: Book3DProps) {
         <div className="book3d-face book3d-top" />
         <div className="book3d-face book3d-bottom" />
       </div>
+      <div className="book3d-shadow" aria-hidden="true" />
 
       <style jsx>{`
         .book3d-stage {
-          perspective: 1600px;
+          position: relative;
+          perspective: 2200px;
           display: flex;
           justify-content: center;
           align-items: center;
-          padding: 40px 0;
+          padding: 48px 0 64px;
         }
         .book3d {
           position: relative;
           width: 220px;
           height: 320px;
           transform-style: preserve-3d;
-          animation: book-spin 14s linear infinite;
+          animation: book-spin 16s linear infinite;
         }
         .book3d:hover { animation-play-state: paused; }
         .book3d-face {
           position: absolute;
           overflow: hidden;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+        /* Contained ground shadow — does not bleed onto content below */
+        .book3d-shadow {
+          position: absolute;
+          bottom: 30px;
+          width: 190px;
+          height: 22px;
+          border-radius: 50%;
+          background: radial-gradient(ellipse at center, rgba(20,10,5,0.28), rgba(20,10,5,0) 72%);
+          filter: blur(7px);
+          z-index: -1;
         }
         .book3d-front, .book3d-back {
           width: 220px; height: 320px;
@@ -110,8 +122,8 @@ export function Book3D({ coverSrc, backSrc, title, author }: Book3DProps) {
         .book3d-fallback-om     { font-size: 52px; color: #fff; opacity: 0.9; }
         .book3d-fallback-author { font-size: 12px; font-weight: 700; color: #f3ede0; }
         @keyframes book-spin {
-          from { transform: rotateY(0deg)   rotateX(-6deg); }
-          to   { transform: rotateY(360deg) rotateX(-6deg); }
+          from { transform: rotateY(0deg)   rotateX(-2deg); }
+          to   { transform: rotateY(360deg) rotateX(-2deg); }
         }
         @media (max-width: 640px) {
           .book3d { width: 170px; height: 250px; }
