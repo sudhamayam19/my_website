@@ -111,7 +111,7 @@ export function Book3D({ coverSrc, backSrc, title, author }: Book3DProps) {
           background: repeating-linear-gradient(to right,#fdfaf2,#fdfaf2 1px,#e6ddc9 2px,#fdfaf2 3px);
         }
         .book3d-top    { top: 0;    transform: rotateX(90deg) translateZ(20px); }
-        .book3d-bottom { bottom: 0; transform: rotateX(-90deg) translateZ(300px); }
+        .book3d-bottom { bottom: 0; transform: rotateX(-90deg) translateZ(20px); }
         .book3d-fallback {
           width: 100%; height: 100%;
           display: flex; flex-direction: column; align-items: center; justify-content: space-between;
@@ -130,7 +130,6 @@ export function Book3D({ coverSrc, backSrc, title, author }: Book3DProps) {
           .book3d-front, .book3d-back { width: 170px; height: 250px; }
           .book3d-spine, .book3d-pages { height: 250px; }
           .book3d-top, .book3d-bottom { width: 170px; }
-          .book3d-bottom { transform: rotateX(-90deg) translateZ(230px); }
         }
       `}</style>
     </div>
