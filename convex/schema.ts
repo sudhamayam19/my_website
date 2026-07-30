@@ -148,4 +148,38 @@ export default defineSchema({
   })
     .index("by_dateTs", ["dateTs"])
     .index("by_featured_dateTs", ["featured", "dateTs"]),
+
+  // Community discussions — readers start their own topics
+  discussionTopics: defineTable({
+    title: v.string(),
+    body: v.string(),
+    author: v.string(),
+    category: v.string(),          // e.g. "Cricket", "Culture", "Women", "General"
+    createdAt: v.string(),
+    createdAtTs: v.number(),
+    lastActivityTs: v.number(),
+    replyCount: v.number(),
+    status: v.union(
+      v.literal("approved"),
+      v.literal("hidden"),
+      v.literal("spam"),
+    ),
+    pinned: v.optional(v.boolean()),
+  })
+    .index("by_lastActivityTs", ["lastActivityTs"])
+    .index("by_status_lastActivityTs", ["status", "lastActivityTs"]),
+
+  discussionReplies: defineTable({
+    topicId: v.id("discussionTopics"),
+    author: v.string(),
+    message: v.string(),
+    createdAt: v.string(),
+    createdAtTs: v.number(),
+    authorType: v.optional(v.union(v.literal("user"), v.literal("admin"))),
+    status: v.union(
+      v.literal("approved"),
+      v.literal("hidden"),
+      v.literal("spam"),
+    ),
+  }).index("by_topicId_createdAtTs", ["topicId", "createdAtTs"]),
 });

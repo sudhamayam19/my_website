@@ -4,7 +4,7 @@ import { getBlogPosts, getPodcastEpisodes } from "@/lib/content-store";
 const BASE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sudhamayam.vercel.app";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticPages = ["", "/about", "/blog", "/podcasts", "/media", "/gallery", "/contact", "/privacy-policy"].map(
+  const staticPages = ["", "/about", "/blog", "/podcasts", "/media", "/books", "/community", "/gallery", "/contact", "/privacy-policy"].map(
     (path) => ({
       url: `${BASE}${path}`,
       lastModified: new Date(),
