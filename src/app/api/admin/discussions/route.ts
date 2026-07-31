@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/api-auth";
 import {
+  createDiscussionTopic,
   deleteDiscussionTopic,
   getDiscussionTopics,
   updateDiscussionTopicStatus,
@@ -11,6 +12,45 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return NextResponse.json({ topics: await getDiscussionTopics(true) });
+}
+
+// Sudha posts a new discussion prompt (the "line to discuss") + guidelines
+export async function POST(req: Request) {
+  if (!(await isAdminRequest(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    const body = (await req.json()) as {
+      title?: string;
+      body?: string;
+      guidelines?: string;
+      category?: string;
+      author?: string;
+    };
+    const title = (body.title ?? "").trim();
+    const prompt = (body.body ?? "").trim();
+
+    if (!title || !prompt) {
+      return NextResponse.json({ error: "Title and discussion line are required." }, { status: 400 });
+    }
+    if (title.length > 140) {
+      return NextResponse.json({ error: "Title is too long (max 140 characters)." }, { status: 400 });
+    }
+
+    const { id } = await createDiscussionTopic({
+      title,
+      body: prompt,
+      guidelines: body.guidelines,
+      category: body.category,
+      author: (body.author ?? "Sudha").trim() || "Sudha",
+    });
+    return NextResponse.json({ id });
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Could not create discussion." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function PATCH(req: Request) {

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAdminRequest } from "@/lib/api-auth";
 import { addDiscussionReply } from "@/lib/discussions";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +16,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return NextResponse.json({ error: "Reply is too long." }, { status: 400 });
     }
 
-    const reply = await addDiscussionReply({ topicId: id, author, message });
+    // Sudha's own replies get badged as admin
+    const isAdmin = await isAdminRequest(req);
+    const reply = await addDiscussionReply({
+      topicId: id,
+      author,
+      message,
+      authorType: isAdmin ? "admin" : "user",
+    });
     return NextResponse.json({ reply });
   } catch (e) {
     return NextResponse.json(

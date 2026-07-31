@@ -17,7 +17,7 @@ export async function generateMetadata(
   const topic = await getDiscussionTopic(id);
   if (!topic) return { title: `Discussion | ${SITE_NAME}` };
   return {
-    title: `${topic.title} | Community | ${SITE_NAME}`,
+    title: `${topic.title} | Discussions | ${SITE_NAME}`,
     description: topic.body.slice(0, 160),
   };
 }
@@ -41,29 +41,41 @@ export default async function TopicPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="page-shell">
-      <SiteHeader navItems={navItems} activeHref="/community" />
+      <SiteHeader navItems={navItems} activeHref="/discussions" />
 
       <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8 space-y-6">
-        <Link href="/community" className="inline-flex items-center gap-1 text-sm font-semibold text-[#1f6973] hover:underline">
+        <Link href="/discussions" className="inline-flex items-center gap-1 text-sm font-semibold text-[#1f6973] hover:underline">
           ← All discussions
         </Link>
 
-        {/* Topic */}
+        {/* The prompt Sudha opened */}
         <article className="rounded-2xl border border-[#d8c8b0] bg-[#fffaf3] p-6">
           <span className="rounded-full bg-[#1f6973]/10 px-2.5 py-0.5 text-[11px] font-bold text-[#1f6973]">
             {topic.category}
           </span>
           <h1 className="display-font mt-3 text-3xl font-bold text-[#1f2d39] sm:text-4xl">{topic.title}</h1>
           <p className="mt-2 text-xs text-[#8fa3ad]">
-            by <span className="font-semibold text-[#60717b]">{topic.author}</span> · {fmt(topic.createdAt)}
+            opened by <span className="font-semibold text-[#60717b]">{topic.author}</span> · {fmt(topic.createdAt)}
           </p>
-          <p className="mt-4 whitespace-pre-wrap text-base leading-relaxed text-[#40515c]">{topic.body}</p>
+          <p className="mt-4 whitespace-pre-wrap text-lg leading-relaxed text-[#2f4049]">{topic.body}</p>
         </article>
+
+        {/* Guidelines */}
+        {topic.guidelines && (
+          <aside className="rounded-2xl border border-[#d89a55]/40 bg-gradient-to-br from-[#fff9ef] to-[#fffaf3] p-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-[#c8842a]">
+              📋 How to take part
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#50616d]">
+              {topic.guidelines}
+            </p>
+          </aside>
+        )}
 
         {/* Replies */}
         <div>
           <h2 className="display-font text-xl font-bold text-[#1f2d39]">
-            {topic.replies.length} {topic.replies.length === 1 ? "Reply" : "Replies"}
+            {topic.replies.length} {topic.replies.length === 1 ? "Response" : "Responses"}
           </h2>
           <div className="mt-3 space-y-3">
             {topic.replies.map((r) => (

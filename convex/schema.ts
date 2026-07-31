@@ -149,10 +149,11 @@ export default defineSchema({
     .index("by_dateTs", ["dateTs"])
     .index("by_featured_dateTs", ["featured", "dateTs"]),
 
-  // Community discussions — readers start their own topics
+  // Host-led discussions — Sudha posts a prompt, readers reply
   discussionTopics: defineTable({
     title: v.string(),
-    body: v.string(),
+    body: v.string(),              // the "line to discuss"
+    guidelines: v.optional(v.string()),
     author: v.string(),
     category: v.string(),          // e.g. "Cricket", "Culture", "Women", "General"
     createdAt: v.string(),

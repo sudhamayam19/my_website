@@ -30,7 +30,7 @@ export async function getHomeNav(options?: NavOptions): Promise<NavItem[]> {
   if (options?.includePodcasts ?? true) {
     items.push({ label: "Podcasts", href: "/podcasts" });
   }
-  items.push({ label: "Community", href: "/community" });
+  items.push({ label: "Discussions", href: "/discussions" });
   items.push({ label: "Contact", href: "/contact" });
   if (showAdmin) {
     items.push({ label: "Admin", href: "/admin" });

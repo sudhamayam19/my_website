@@ -16,7 +16,7 @@ export function TopicReplyForm({ topicId }: { topicId: string }) {
     setBusy(true);
     setError("");
     try {
-      const res = await fetch(`/api/community/topics/${topicId}/replies`, {
+      const res = await fetch(`/api/discussions/${topicId}/replies`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ author, message }),

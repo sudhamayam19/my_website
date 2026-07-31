@@ -1,7 +1,7 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 
-// Community discussions — readers start topics and reply to each other.
+// Host-led discussions — Sudha opens a topic, readers reply.
 
 export const listTopics = queryGeneric({
   args: { includeHidden: v.optional(v.boolean()) },
@@ -21,6 +21,7 @@ export const listTopics = queryGeneric({
         id: String(r._id),
         title: r.title,
         body: r.body,
+        guidelines: r.guidelines ?? "",
         author: r.author,
         category: r.category,
         createdAt: r.createdAt,
@@ -45,6 +46,7 @@ export const getTopic = queryGeneric({
       id: String(t._id),
       title: t.title,
       body: t.body,
+      guidelines: t.guidelines ?? "",
       author: t.author,
       category: t.category,
       createdAt: t.createdAt,
@@ -68,6 +70,7 @@ export const createTopic = mutationGeneric({
   args: {
     title: v.string(),
     body: v.string(),
+    guidelines: v.optional(v.string()),
     author: v.string(),
     category: v.optional(v.string()),
   },
@@ -83,6 +86,7 @@ export const createTopic = mutationGeneric({
     const id = await ctx.db.insert("discussionTopics", {
       title,
       body,
+      guidelines: (args.guidelines ?? "").trim() || undefined,
       author,
       category: (args.category ?? "General").trim() || "General",
       createdAt: now,
