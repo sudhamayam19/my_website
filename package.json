@@ -12,7 +12,7 @@
     "mobile:start": "npm --prefix apps/admin-mobile run start",
     "mobile:android": "npm --prefix apps/admin-mobile run android",
     "build": "next build",
-    "vercel-build": "convex deploy --cmd 'next build'",
+    "vercel-build": "convex deploy --cmd 'next build' || next build",
     "start": "next start",
     "lint": "eslint"
   },
