@@ -144,7 +144,8 @@ export function ChangeMakersAdmin() {
   };
 
   const edit = (item: ChangeMaker) => {
-    setForm({ ...item, id: item._id });
+    const { _id, ...rest } = item;      // drop _id — Convex rejects unknown args
+    setForm({ ...rest, id: _id });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
