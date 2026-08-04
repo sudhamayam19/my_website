@@ -59,6 +59,14 @@ export default async function DiscussionsPage() {
                 className="block rounded-2xl border border-[#d8c8b0] bg-[#fffaf3] p-5 transition hover:shadow-md hover:-translate-y-0.5"
               >
                 <div className="flex items-start justify-between gap-4">
+                  {t.imageUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={t.imageUrl}
+                      alt=""
+                      className="h-20 w-20 shrink-0 rounded-xl border border-[#e0d4c0] object-cover"
+                    />
+                  )}
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       {t.pinned && <span className="text-xs">📌</span>}

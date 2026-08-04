@@ -58,6 +58,14 @@ export default async function TopicPage({ params }: { params: Promise<{ id: stri
             opened by <span className="font-semibold text-[#60717b]">{topic.author}</span> · {fmt(topic.createdAt)}
           </p>
           <p className="mt-4 whitespace-pre-wrap text-lg leading-relaxed text-[#2f4049]">{topic.body}</p>
+          {topic.imageUrl && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={topic.imageUrl}
+              alt=""
+              className="mt-5 w-full rounded-xl border border-[#e0d4c0] object-cover"
+            />
+          )}
         </article>
 
         {/* Guidelines */}

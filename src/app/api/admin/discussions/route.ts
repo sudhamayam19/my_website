@@ -24,6 +24,7 @@ export async function POST(req: Request) {
       title?: string;
       body?: string;
       guidelines?: string;
+      imageUrl?: string;
       category?: string;
       author?: string;
     };
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       title,
       body: prompt,
       guidelines: body.guidelines,
+      imageUrl: body.imageUrl?.trim() || undefined,
       category: body.category,
       author: (body.author ?? "Sudha").trim() || "Sudha",
     });

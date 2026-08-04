@@ -154,6 +154,7 @@ export default defineSchema({
     title: v.string(),
     body: v.string(),              // the "line to discuss"
     guidelines: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
     author: v.string(),
     category: v.string(),          // e.g. "Cricket", "Culture", "Women", "General"
     createdAt: v.string(),

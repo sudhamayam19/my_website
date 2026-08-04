@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { DiscussionTopic } from "@/lib/discussions";
+import { PhotoPicker } from "@/components/admin/PhotoPicker";
 
 const CATEGORIES = ["General", "Cricket", "Telugu Culture", "Women & Life", "Podcast", "Writing"];
 
@@ -19,6 +20,7 @@ export function DiscussionsAdmin() {
   const [body, setBody] = useState("");
   const [guidelines, setGuidelines] = useState(DEFAULT_GUIDELINES);
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [imageUrl, setImageUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -46,11 +48,11 @@ export function DiscussionsAdmin() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ title, body, guidelines, category }),
+        body: JSON.stringify({ title, body, guidelines, imageUrl, category }),
       });
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !data.id) throw new Error(data.error ?? "Could not open discussion.");
-      setTitle(""); setBody(""); setGuidelines(DEFAULT_GUIDELINES);
+      setTitle(""); setBody(""); setGuidelines(DEFAULT_GUIDELINES); setImageUrl("");
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -125,6 +127,8 @@ export function DiscussionsAdmin() {
             className="mt-1 w-full rounded-xl border border-[#d8c8b0] bg-white px-4 py-3 text-sm leading-relaxed outline-none focus:border-[#1f6973]"
           />
         </div>
+
+        <PhotoPicker value={imageUrl} onChange={setImageUrl} label="Image (optional)" />
 
         <div>
           <label className="text-xs font-bold uppercase tracking-wider text-[#2a6670]">

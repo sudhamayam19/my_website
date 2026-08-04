@@ -8,6 +8,7 @@ export interface DiscussionTopic {
   title: string;
   body: string;
   guidelines: string;
+  imageUrl: string;
   author: string;
   category: string;
   createdAt: string;
@@ -63,6 +64,7 @@ export async function createDiscussionTopic(input: {
   title: string;
   body: string;
   guidelines?: string;
+  imageUrl?: string;
   author: string;
   category?: string;
 }): Promise<{ id: string }> {
