@@ -156,3 +156,49 @@ export const deleteTopic = mutationGeneric({
     return { ok: true };
   },
 });
+
+// One-off seed for testing — creates a sample discussion if none exist.
+export const seedExample = mutationGeneric({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("discussionTopics").first();
+    if (existing) return { skipped: true, reason: "Discussions already exist." };
+
+    const now = new Date().toISOString();
+    const ts = Date.parse(now);
+    const id = await ctx.db.insert("discussionTopics", {
+      title: "Does Telugu cinema still tell our real stories?",
+      body:
+        "Every festival season we get bigger sets, louder music, grander heroes. " +
+        "But somewhere between the spectacle, I keep wondering — are we still telling " +
+        "the small, honest stories that made Telugu cinema ours?\n\n" +
+        "What was the last Telugu film that felt truly like home to you?",
+      guidelines:
+        "• Keep it respectful — everyone's view matters.\n" +
+        "• Stay on the topic above.\n" +
+        "• Share your own experience, not just opinions.\n" +
+        "• No promotions or abusive language.",
+      author: "Sudha",
+      category: "Telugu Culture",
+      createdAt: now,
+      createdAtTs: ts,
+      lastActivityTs: ts,
+      replyCount: 1,
+      status: "approved",
+    });
+
+    await ctx.db.insert("discussionReplies", {
+      topicId: id,
+      author: "Ravi",
+      message:
+        "For me it was 'Balagam'. No big hero, no fights — just a family, a village, " +
+        "and grief. I called my mother right after watching it.",
+      createdAt: now,
+      createdAtTs: ts + 1000,
+      authorType: "user",
+      status: "approved",
+    });
+
+    return { seeded: true, id: String(id) };
+  },
+});
