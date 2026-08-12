@@ -12,9 +12,11 @@
     "mobile:start": "npm --prefix apps/admin-mobile run start",
     "mobile:android": "npm --prefix apps/admin-mobile run android",
     "build": "next build",
-    "vercel-build": "convex deploy --cmd 'next build' || next build",
+    "vercel-build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:backup": "node scripts/backup-db.mjs",
+    "db:restore": "convex import --prod --replace-all"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",

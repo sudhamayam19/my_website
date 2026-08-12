@@ -45,3 +45,6 @@ next-env.d.ts
 
 # convex
 /convex/_generated
+
+# Convex DB snapshots (contain reader data — never commit)
+backups/*.zip
