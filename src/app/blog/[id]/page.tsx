@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { AdSenseAd } from "@/components/AdSenseAd";
 import { getBlogNav } from "@/components/AuthNav";
 import { CommentsSection } from "@/components/CommentsSection";
+import { DiscussionCTA } from "@/components/DiscussionCTA";
 import { PostViewTracker } from "@/components/PostViewTracker";
 import { PostLikeButton } from "@/components/PostLikeButton";
 import { RichTextRenderer } from "@/components/RichTextRenderer";
@@ -142,6 +143,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               <PostLikeButton postId={post.id} initialLikes={post.likes ?? 0} />
             </div>
             <ShareButtons />
+            <DiscussionCTA />
             <CommentsSection postId={post.id} initialComments={comments} />
           </section>
 

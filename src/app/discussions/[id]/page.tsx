@@ -5,6 +5,7 @@ import { getHomeNav } from "@/components/AuthNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { TopicReplyForm } from "@/components/TopicReplyForm";
+import { ShareButtons } from "@/components/ShareButtons";
 import { getDiscussionTopic } from "@/lib/discussions";
 import { SITE_NAME } from "@/lib/site-data";
 
@@ -111,6 +112,11 @@ export default async function TopicPage({ params }: { params: Promise<{ id: stri
         </div>
 
         <TopicReplyForm topicId={topic.id} />
+
+        <ShareButtons
+          heading="Share this discussion"
+          shareText={`"${topic.title}" — join the discussion on Sudha Devarakonda's site`}
+        />
       </main>
 
       <SiteFooter />

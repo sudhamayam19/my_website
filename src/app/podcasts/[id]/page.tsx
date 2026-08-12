@@ -6,6 +6,7 @@ import { PodcastPlayer } from "@/components/PodcastPlayer";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { CommentsSection } from "@/components/CommentsSection";
+import { DiscussionCTA } from "@/components/DiscussionCTA";
 import { getCommentsByPostId, getPodcastEpisodeById, getPodcastEpisodes } from "@/lib/content-store";
 import { formatDisplayDate, formatDurationMinutes, SITE_NAME } from "@/lib/site-data";
 
@@ -161,6 +162,8 @@ export default async function PodcastEpisodePage({ params }: Props) {
                 {episode.description || episode.excerpt}
               </p>
             </div>
+
+            <DiscussionCTA />
 
             {/* Comments */}
             <CommentsSection postId={episode.id} initialComments={comments} />
