@@ -28,6 +28,14 @@ const photos: Photo[] = [
   { src: "/gallery/photo-14.jpg" },
   { src: "/gallery/photo-15.jpg" },
   { src: "/gallery/photo-16.jpg" },
+  { src: "/gallery/photo-17.jpg" },
+  { src: "/gallery/photo-18.jpg" },
+  { src: "/gallery/photo-19.jpg" },
+  { src: "/gallery/photo-20.jpg" },
+  { src: "/gallery/photo-21.jpg" },
+  { src: "/gallery/photo-22.jpg" },
+  { src: "/gallery/photo-23.jpg" },
+  { src: "/gallery/photo-24.jpg" },
 ];
 
 export default async function GalleryPage() {
