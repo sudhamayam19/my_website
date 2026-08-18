@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PhotoPicker } from "@/components/admin/PhotoPicker";
 
 type Category = "tv" | "radio" | "print" | "online" | "podcast" | "event";
 
@@ -142,12 +143,11 @@ export function MediaAdmin() {
                 placeholder="https://..."
                 className="w-full rounded-xl border border-[#d3c1a8] bg-white px-3 py-2 text-sm outline-none focus:border-[#2a6670]" />
             </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-semibold text-[#304a56]">Image URL (optional)</span>
-              <input value={form.imageUrl} onChange={(e) => setForm((f) => ({ ...f, imageUrl: e.target.value }))}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-[#d3c1a8] bg-white px-3 py-2 text-sm outline-none focus:border-[#2a6670]" />
-            </label>
+            <PhotoPicker
+              value={form.imageUrl}
+              onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+              label="Image (optional)"
+            />
           </div>
 
           <label className="flex items-center gap-3 cursor-pointer">
@@ -184,6 +184,16 @@ export function MediaAdmin() {
                 </div>
                 <p className="font-semibold text-[#1f2d39] truncate mt-0.5">{item.title}</p>
                 <p className="text-xs text-[#60717b]">{item.outlet}</p>
+                {item.link && (
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-0.5 block truncate text-xs font-semibold text-[#1d6fd8] underline decoration-[#1d6fd8]/40 underline-offset-2 hover:text-[#0f4fa8]"
+                  >
+                    {item.link}
+                  </a>
+                )}
               </div>
               <div className="flex gap-2 shrink-0">
                 <button onClick={() => edit(item)} className="rounded-full border border-[#d3c1a8] px-3 py-1.5 text-xs font-bold text-[#455964] hover:border-[#1f6973] hover:text-[#1f6973] transition">

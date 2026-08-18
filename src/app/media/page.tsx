@@ -177,7 +177,7 @@ export default async function MediaPage() {
                       <p className="text-sm font-semibold text-[#2a6670] mt-1">{item.outlet}</p>
                       {item.description && <p className="mt-2 text-sm text-[#4f5f69] leading-relaxed">{item.description}</p>}
                       {item.link && (
-                        <a href={item.link} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[#1f6973] hover:underline">
+                        <a href={item.link} target="_blank" rel="noopener noreferrer" title={item.link} className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[#1d6fd8] underline decoration-[#1d6fd8]/40 underline-offset-2 transition hover:text-[#0f4fa8] hover:decoration-[#0f4fa8]">
                           View appearance →
                         </a>
                       )}
@@ -216,7 +216,7 @@ export default async function MediaPage() {
                       {item.description && <p className="mt-1 text-xs text-[#60717b] line-clamp-2">{item.description}</p>}
                     </div>
                     {item.link && (
-                      <a href={item.link} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-bold text-[#1f6973] hover:underline">
+                      <a href={item.link} target="_blank" rel="noopener noreferrer" title={item.link} className="shrink-0 text-sm font-bold text-[#1d6fd8] underline decoration-[#1d6fd8]/40 underline-offset-2 transition hover:text-[#0f4fa8] hover:decoration-[#0f4fa8]">
                         View →
                       </a>
                     )}
